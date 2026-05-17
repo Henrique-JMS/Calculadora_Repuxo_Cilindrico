@@ -69,6 +69,7 @@ class PassData:
     drawing_ratio:   float
     reduction_pct:   float
     r_die:           float
+    r_punch:         float
     severity:        str
     is_final:        bool = False
 
@@ -313,6 +314,7 @@ def compute_pass_sequence(
             drawing_ratio    = round(dr, 6),
             reduction_pct    = round((1.0 - m) * 100.0, 4),
             r_die            = round(r_die, 4),
+            r_punch          = round(r_punch, 4),
             severity         = _severity_band(dr),
             is_final         = is_final,
         ))
