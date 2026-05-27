@@ -24,6 +24,7 @@ BASE = dict(
     r_punch_final=4.5,
     m1_lim=0.50,
     mn_lim=0.75,
+    d_f=120.0,
 )
 
 
@@ -199,3 +200,45 @@ class TestErrors:
     def test_raises_on_zero_t(self):
         with pytest.raises(ValueError):
             run(d_blank=160.0, t=0.0)
+
+    def test_raises_on_invalid_d_f(self):
+        with pytest.raises(ValueError):
+            run(d_blank=160.0, d_f=80.0)  # d_f <= d_i + 2t = 83.0
+
+
+# ---------------------------------------------------------------------------
+# Flange diameter checks
+# ---------------------------------------------------------------------------
+
+class TestFlangeDiameter:
+
+    def test_flange_diameter_present(self):
+        result = run(d_blank=160.0)
+        for p in result.passes:
+            assert hasattr(p, "flange_diameter")
+
+    def test_flange_diameter_positive(self):
+        result = run(d_blank=160.0)
+        for p in result.passes:
+            assert p.flange_diameter > 0
+
+    def test_flange_diameter_final_equals_d_f(self):
+        result = run(d_blank=160.0)
+        assert result.passes[-1].flange_diameter == pytest.approx(120.0, rel=1e-3)
+
+    def test_flange_diameter_monotonic_decreasing(self):
+        result = run(d_blank=300.0)  # multiple passes
+        flanges = [p.flange_diameter for p in result.passes]
+        for i in range(1, len(flanges)):
+            assert flanges[i] <= flanges[i-1] + 1e-6
+
+    def test_flange_diameter_first_pass_less_than_blank(self):
+        result = run(d_blank=250.0)
+        d_blank = 250.0
+        assert result.passes[0].flange_diameter <= d_blank + 1e-6
+
+    def test_flange_diameter_ge_outer_wall(self):
+        result = run(d_blank=250.0)
+        for p in result.passes:
+            min_d = p.d_after + 1.5  # d_after + t
+            assert p.flange_diameter >= min_d - 1e-6

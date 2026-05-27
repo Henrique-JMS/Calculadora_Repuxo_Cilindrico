@@ -425,6 +425,7 @@ def main() -> None:
             d_i=inputs["d_i"], H=inputs["H"], t=inputs["t"],
             r_die_final=inputs["r_die"], r_punch_final=inputs["r_punch"],
             m1_lim=inputs["m1_lim"], mn_lim=inputs["mn_lim"],
+            d_f=inputs["d_f"],
         )
         proc_res = compute_process_data(
             passes_geom=seq_res.passes,

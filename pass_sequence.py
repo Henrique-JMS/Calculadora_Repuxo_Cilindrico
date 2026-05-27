@@ -58,20 +58,22 @@ class PassData:
         reduction_pct    : Percentage diameter reduction = (1 - m) * 100 (%).
         r_die            : Die corner radius used for this pass (mm).
         severity         : "green" | "yellow" | "red"  (DR severity band).
+        flange_diameter  : Outer diameter of the flange at this pass (mm).
         is_final         : True for the last pass.
     """
-    pass_number:     int
-    d_before:        float
-    d_after:         float
-    d_neutral_after: float
-    height:          float
-    drawing_coeff:   float
-    drawing_ratio:   float
-    reduction_pct:   float
-    r_die:           float
-    r_punch:         float
-    severity:        str
-    is_final:        bool = False
+    pass_number:      int
+    d_before:         float
+    d_after:          float
+    d_neutral_after:  float
+    height:           float
+    drawing_coeff:    float
+    drawing_ratio:    float
+    reduction_pct:    float
+    r_die:            float
+    r_punch:          float
+    severity:         str
+    flange_diameter:  float = 0.0
+    is_final:         bool = False
 
 
 @dataclass
@@ -224,6 +226,7 @@ def compute_pass_sequence(
     r_punch_final: float,
     m1_lim: float,
     mn_lim: float,
+    d_f: float,
 ) -> PassSequenceResult:
     """
     Compute the complete drawing pass sequence for a flanged cylindrical cup.
@@ -237,6 +240,7 @@ def compute_pass_sequence(
         r_punch_final : Punch corner radius for the final pass (mm).
         m1_lim        : Limiting drawing coefficient for the 1st pass.
         mn_lim        : Limiting drawing coefficient for subsequent passes.
+        d_f           : Flange outer diameter of the finished part (mm).
 
     Returns:
         PassSequenceResult with all pass data.
@@ -250,6 +254,10 @@ def compute_pass_sequence(
         raise ValueError(f"d_i must be > 0. Got {d_i}.")
     if t <= 0:
         raise ValueError(f"t must be > 0. Got {t}.")
+    if d_f <= d_i + 2.0 * t:
+        raise ValueError(
+            f"d_f ({d_f}) must be > d_i + 2t ({d_i + 2.0 * t})."
+        )
 
     # Target neutral (mid-plane) diameter of the finished cup wall
     d_target = d_i + t
@@ -304,6 +312,25 @@ def compute_pass_sequence(
         else:
             height = _height_from_area(d_blank, d_after, r_punch)
 
+        # Flange diameter: interpolates between D_blank and d_f based on
+        # how much drawing has been done (cup diameter progress).
+        # At pass 1 the flange is close to D_blank; at the final pass it is d_f.
+        d_target_local = d_target
+        if n_passes == 1:
+            flange_d = d_f
+        else:
+            if abs(d_blank - d_target_local) > 1e-12:
+                progress = (d_blank - d_after) / (d_blank - d_target_local)
+            else:
+                progress = 1.0
+            progress = max(0.0, min(1.0, progress))
+            flange_d = d_blank - (d_blank - d_f) * progress
+            d_outer_wall = d_after + t
+            if flange_d < d_outer_wall:
+                flange_d = d_outer_wall
+        if is_final:
+            flange_d = d_f
+
         passes.append(PassData(
             pass_number      = i + 1,
             d_before         = round(d_before, 4),
@@ -316,6 +343,7 @@ def compute_pass_sequence(
             r_die            = round(r_die, 4),
             r_punch          = round(r_punch, 4),
             severity         = _severity_band(dr),
+            flange_diameter  = round(flange_d, 4),
             is_final         = is_final,
         ))
 

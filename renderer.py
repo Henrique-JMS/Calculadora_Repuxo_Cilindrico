@@ -149,14 +149,19 @@ def _cup_profile(pd: PassData, t: float, d_f: Optional[float] = None
     ax, ay = _arc_xy(r_i - r_p, r_p, r_p, 270, 360)
     segs.append((ax, ay))
 
-    # 3. Inner wall
-    segs.append((np.array([r_i, r_i]), np.array([r_p, H])))
+    # 3. Inner wall — shortened by r_die
+    segs.append((np.array([r_i, r_i]), np.array([r_p, H - r_m])))
 
-    # 4. Flange top or rim
+    # 3b. Die fillet on inner surface (wall → flange top)
+    #     centre: (r_i + r_m, H - r_m), CCW 90° → 180°
+    ax, ay = _arc_xy(r_i + r_m, H - r_m, r_m, 90, 180)
+    segs.append((ax, ay))
+
+    # 4. Flange top or rim — shortened by r_die
     if r_f is not None:
-        segs.append((np.array([r_i, r_f]), np.array([H, H])))
+        segs.append((np.array([r_i + r_m, r_f]), np.array([H, H])))
     else:
-        segs.append((np.array([r_i, r_o]), np.array([H, H])))
+        segs.append((np.array([r_i + r_m, r_o]), np.array([H, H])))
 
     # ---- OUTER SURFACE (top → bottom) ------------------------------------
 
@@ -165,11 +170,11 @@ def _cup_profile(pd: PassData, t: float, d_f: Optional[float] = None
         segs.append((np.array([r_f, r_f]), np.array([H, H - t])))
 
         # 6. Flange bottom
-        die_tp_x = r_o - r_m
+        die_tp_x = r_o + r_m
         segs.append((np.array([r_f, die_tp_x]), np.array([H - t, H - t])))
 
-        # 7. Die fillet (CCW 0° → 90°)
-        ax, ay = _arc_xy(r_o - r_m, H - t - r_m, r_m, 0, 90)
+        # 7. Die fillet (flange bottom → wall, fillet, CCW 90° → 180°)
+        ax, ay = _arc_xy(r_o + r_m, H - t - r_m, r_m, 90, 180)
         segs.append((ax, ay))
 
         # 8. Outer wall (below die fillet to outer punch fillet)
@@ -222,21 +227,27 @@ def _cup_fill_polygon(pd: PassData, t: float, d_f: Optional[float] = None,
     _add(r_i - r_p, 0.0)
     ax, ay = _arc_xy(r_i - r_p, r_p, r_p, 270, 360, n_arc)
     _add(ax, ay)
-    _add(r_i, H)
+    _add(r_i, H - r_m)         # shortened inner wall
+    # Upper die fillet — reversed: wall (r_i, H-r_m) → flange (r_i+r_m, H)
+    ax, ay = _arc_xy(r_i + r_m, H - r_m, r_m, 90, 180, n_arc)
+    _add(ax[::-1], ay[::-1])
 
     if r_f is not None:
         _add(r_f, H)
         _add(r_f, H - t)
-        _add(r_o - r_m, H - t)
-        ax, ay = _arc_xy(r_o - r_m, H - t - r_m, r_m, 0, 90, n_arc)
+        # Lower die fillet — flange (r_o+r_m, H-t) → wall (r_o, H-t-r_m)
+        # CCW 90°→180° goes from flange to wall
+        ax, ay = _arc_xy(r_o + r_m, H - t - r_m, r_m, 90, 180, n_arc)
         _add(ax, ay)
         _add(r_o, r_p)
     else:
         _add(r_o, H)
         _add(r_o, r_p)
 
+    # Outer punch fillet — reversed: wall (ro, rp) → bottom (ri-rp, -t)
+    # 270°→360° goes bottom→wall, reversal makes it wall→bottom for the polygon
     ax, ay = _arc_xy(r_i - r_p, r_p, r_p + t, 270, 360, n_arc)
-    _add(ax, ay)
+    _add(ax[::-1], ay[::-1])
     _add(0.0, -t)
     _add(0.0, 0.0)   # close
 
@@ -436,8 +447,7 @@ def render_all_stages(
 
     # Each pass
     for pd in seq_res.passes:
-        flange = d_f if pd.is_final else None
-        figures.append(render_pass(pd, t, d_f=flange, d_i=d_i))
+        figures.append(render_pass(pd, t, d_f=pd.flange_diameter, d_i=d_i))
 
     return figures
 
@@ -497,9 +507,9 @@ def render_overview(
     for i, pd in enumerate(seq_res.passes):
         ax = axes[i + 1]
         _style(ax)
-        flange = d_f if pd.is_final else None
+        flange = pd.flange_diameter
         r_i, r_o = _cup_radii(pd.d_after, t)
-        r_f = d_f / 2.0 if pd.is_final else r_o
+        r_f = flange / 2.0
         max_r = max(r_f, r_o)
         H = pd.height
 

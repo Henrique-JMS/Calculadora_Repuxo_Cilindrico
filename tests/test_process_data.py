@@ -45,6 +45,7 @@ def standard_result():
         d_i=80.0, H=60.0, t=1.5,
         r_die_final=6.0, r_punch_final=4.5,
         m1_lim=0.50, mn_lim=0.75,
+        d_f=120.0,
     )
     result = compute_process_data(
         passes_geom=seq.passes,
@@ -217,6 +218,7 @@ class TestSafetyFactor:
             d_i=80.0, H=60.0, t=1.5,
             r_die_final=6.0, r_punch_final=4.5,
             m1_lim=0.50, mn_lim=0.75,
+            d_f=120.0,
         )
         r1 = compute_process_data(
             seq.passes, blank.d_blank_final, 120.0, 60.0, 1.5, 310.0, 175.0,

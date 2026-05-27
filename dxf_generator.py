@@ -211,15 +211,20 @@ def _draw_cup(msp, x0: float, pd: PassData, t: float,
     #    centre: (x0 + r_i - r_p,  r_p)
     _arc(msp, x0 + r_i - r_p, r_p, r_p, 270, 360)
 
-    # 3. Inner wall (vertical, upward)
-    _ln(msp, (x0 + r_i, r_p), (x0 + r_i, H))
+    # 3. Inner wall (vertical, upward) — shortened by r_die
+    _ln(msp, (x0 + r_i, r_p), (x0 + r_i, H - r_m))
 
-    # 4a. Final pass: flange top surface
+    # 3b. Die fillet on inner surface (wall → flange top)
+    #     centre: (x0 + r_i + r_m, H - r_m)
+    #     CCW 90° → 180°: from (r_i+r_m, H) on flange to (r_i, H-r_m) on wall
+    _arc(msp, x0 + r_i + r_m, H - r_m, r_m, 90, 180)
+
+    # 4a. Final pass: flange top surface — shortened by r_die
     if r_f is not None:
-        _ln(msp, (x0 + r_i, H), (x0 + r_f, H))
+        _ln(msp, (x0 + r_i + r_m, H), (x0 + r_f, H))
     # 4b. Intermediate pass: rim top edge
     else:
-        _ln(msp, (x0 + r_i, H), (x0 + r_o, H))
+        _ln(msp, (x0 + r_i + r_m, H), (x0 + r_o, H))
 
     # ------------------------------------------------------------------ #
     # OUTER SURFACE (top to bottom, closing the profile)                  #
@@ -230,13 +235,13 @@ def _draw_cup(msp, x0: float, pd: PassData, t: float,
         _ln(msp, (x0 + r_f, H), (x0 + r_f, H - t))
 
         # 6. Flange bottom (inward to die fillet tangent point)
-        die_tp_x = r_o - r_m          # tangent point x (relative to axis)
+        die_tp_x = r_o + r_m          # tangent point x (relative to axis)
         _ln(msp, (x0 + r_f, H - t), (x0 + die_tp_x, H - t))
 
-        # 7. Die fillet (outer wall → flange bottom)
-        #    centre: (x0 + r_o - r_m, H - t - r_m)
-        #    CCW 0° → 90°: from (r_o, H-t-r_m) on wall to (r_o-r_m, H-t) on flange
-        _arc(msp, x0 + r_o - r_m, H - t - r_m, r_m, 0, 90)
+        # 7. Die fillet (flange bottom → wall, fillet)
+        #    centre: (x0 + r_o + r_m, H - t - r_m)
+        #    CCW 90° → 180°: from (r_o+r_m, H-t) on flange to (r_o, H-t-r_m) on wall
+        _arc(msp, x0 + r_o + r_m, H - t - r_m, r_m, 90, 180)
 
         # 8. Outer wall (downward from die fillet to outer punch fillet)
         _ln(msp, (x0 + r_o, H - t - r_m), (x0 + r_o, r_p))
@@ -347,8 +352,7 @@ def generate_dxf(
     # ---- Cup stages (intermediate + final) ---------------------------------
     passes = seq_res.passes
     for idx, pd in enumerate(passes):
-        is_last = pd.is_final
-        flange = d_f if is_last else None
+        flange = pd.flange_diameter
         stage_w = _draw_cup(msp, x_cursor, pd, t, d_f=flange)
         x_cursor += stage_w + _STAGE_GAP
 

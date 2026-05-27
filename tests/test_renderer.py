@@ -43,6 +43,7 @@ def standard_chain():
         d_i=80.0, H=60.0, t=1.5,
         r_die_final=6.0, r_punch_final=4.5,
         m1_lim=0.50, mn_lim=0.75,
+        d_f=120.0,
     )
     return blank, seq
 
@@ -143,7 +144,7 @@ class TestCupProfile:
             d_blank=self.blank.d_blank_final,
             d_i=80.0, H=60.0, t=1.5,
             r_die_final=6.0, r_punch_final=4.5,
-            m1_lim=0.50, mn_lim=0.75,
+            m1_lim=0.50, mn_lim=0.75, d_f=120.0,
         )
 
     def test_profile_returns_segments(self):
@@ -225,7 +226,7 @@ class TestRenderPass:
             d_blank=self.blank.d_blank_final,
             d_i=80.0, H=60.0, t=1.5,
             r_die_final=6.0, r_punch_final=4.5,
-            m1_lim=0.50, mn_lim=0.75,
+            m1_lim=0.50, mn_lim=0.75, d_f=120.0,
         )
 
     def test_returns_figure(self):

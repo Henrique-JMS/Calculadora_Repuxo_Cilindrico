@@ -36,6 +36,7 @@ def standard_chain():
         d_i=80.0, H=60.0, t=1.5,
         r_die_final=6.0, r_punch_final=4.5,
         m1_lim=0.50, mn_lim=0.75,
+        d_f=120.0,
     )
     return blank, seq
 
@@ -140,11 +141,11 @@ class TestEntityScaling:
         """A geometry that requires 2 passes should produce more entities."""
         blank1 = compute_blank(d_i=80.0, H=30.0, d_f=120.0, t=1.5, r_punch=4.5)
         seq1 = compute_pass_sequence(blank1.d_blank_final, 80.0, 30.0, 1.5,
-                                      6.0, 4.5, 0.50, 0.75)
+                                      6.0, 4.5, 0.50, 0.75, d_f=120.0)
 
         blank2 = compute_blank(d_i=40.0, H=80.0, d_f=120.0, t=1.5, r_punch=3.0)
         seq2 = compute_pass_sequence(blank2.d_blank_final, 40.0, 80.0, 1.5,
-                                      6.0, 4.5, 0.50, 0.75)
+                                      6.0, 4.5, 0.50, 0.75, d_f=120.0)
 
         doc1 = generate_dxf(blank1, seq1, t=1.5, d_f=120.0)
         doc2 = generate_dxf(blank2, seq2, t=1.5, d_f=120.0)
@@ -161,7 +162,7 @@ class TestEntityScaling:
         """Small DR → single pass → document still valid."""
         blank = compute_blank(d_i=80.0, H=10.0, d_f=120.0, t=1.5, r_punch=4.5)
         seq = compute_pass_sequence(blank.d_blank_final, 80.0, 10.0, 1.5,
-                                     6.0, 4.5, 0.50, 0.75)
+                                      6.0, 4.5, 0.50, 0.75, d_f=120.0)
         doc = generate_dxf(blank, seq, t=1.5, d_f=120.0)
         assert len(list(doc.modelspace())) > 0
 

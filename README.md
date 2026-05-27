@@ -24,9 +24,9 @@ Calculadora_Repuxo_Cilindrico/
 ├── blank_calculator.py   # Cálculo do blank
 ├── pass_sequence.py      # Sequência de passes
 ├── process_data.py       # Forças, pressões, capacidade da prensa
-├── dxf_generator.py      # Geração de arquivos DXF  [Fase 2]
-├── renderer.py           # Renderização matplotlib  [Fase 2]
-├── app.py                # Interface Streamlit       [Fase 3]
+├── dxf_generator.py      # Geração de arquivos DXF
+├── renderer.py           # Renderização matplotlib
+├── app.py                # Interface Streamlit
 │
 ├── tests/
 │   ├── test_materials.py
@@ -57,7 +57,7 @@ pytest tests/ -v --cov=. --cov-report=term-missing
 pytest tests/test_blank_calculator.py -v
 ```
 
-## Rodando a aplicação (após Fase 3)
+## Rodando a aplicação
 
 ```bash
 streamlit run app.py
@@ -83,7 +83,7 @@ streamlit run app.py
 ## Status do desenvolvimento
 
 - [x] Fase 1 — Núcleo de Cálculo (`constants`, `materials`, `validators`, `blank_calculator`, `pass_sequence`, `process_data`)
-- [ ] Fase 2 — Gerador DXF (`dxf_generator`, `renderer`)
-- [ ] Fase 3 — Interface Streamlit (`app.py`)
-- [ ] Fase 4 — Testes e validação final
+- [x] Fase 2 — Gerador DXF (`dxf_generator`, `renderer`)
+- [x] Fase 3 — Interface Streamlit (`app.py`)
+- [x] Fase 4 — Testes e validação final (213 testes, 100% de aprovação)
 - [ ] Fase 5 — Deploy Streamlit Cloud
