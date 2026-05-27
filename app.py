@@ -35,7 +35,7 @@ from materials import (
 from pass_sequence import compute_pass_sequence
 from process_data import compute_process_data
 from renderer import render_all_stages, render_overview
-from validators import validate_inputs
+from validators import validate_inputs, validate_pass_heights
 
 # ---------------------------------------------------------------------------
 # Page configuration
@@ -427,6 +427,24 @@ def main() -> None:
             m1_lim=inputs["m1_lim"], mn_lim=inputs["mn_lim"],
             d_f=inputs["d_f"],
         )
+
+        # Validate intermediate pass heights before showing results
+        height_validation = validate_pass_heights(
+            seq_res=seq_res,
+            r_punch=inputs["r_punch"],
+            r_die=inputs["r_die"],
+            t=inputs["t"],
+            d_i=inputs["d_i"],
+            d_f=inputs["d_f"],
+            m1_lim=inputs["m1_lim"],
+            mn_lim=inputs["mn_lim"],
+            trim_fraction=inputs["trim_fraction"],
+        )
+        if height_validation.has_errors:
+            for err in height_validation.errors:
+                st.error(f"• {err}")
+            st.stop()
+
         proc_res = compute_process_data(
             passes_geom=seq_res.passes,
             d_blank=blank_res.d_blank_final,

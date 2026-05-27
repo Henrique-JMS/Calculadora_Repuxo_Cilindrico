@@ -8,7 +8,15 @@ import pytest
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from validators import validate_inputs, validate_custom_material, ValidationResult
+from validators import (
+    validate_inputs,
+    validate_custom_material,
+    validate_pass_heights,
+    _estimate_min_H,
+    ValidationResult,
+)
+from blank_calculator import compute_blank
+from pass_sequence import compute_pass_sequence
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +159,26 @@ class TestGeometryErrors:
         assert not result.has_errors
         assert result.has_warnings
 
+    def test_H_below_punch_plus_die_plus_t_is_error(self):
+        # H = 5, r_punch=4, r_die=4, t=1 → min = 9 → error
+        result = run(H=5.0, r_punch=4.0, r_die=4.0, t=1.0)
+        assert result.has_errors
+
+    def test_H_equal_to_minimum_passes(self):
+        # H = 9, r_punch=4, r_die=4, t=1 → min = 9 → passes (no error)
+        result = run(H=9.0, r_punch=4.0, r_die=4.0, t=1.0)
+        assert result.is_valid
+
+    def test_H_just_below_minimum_triggers_error(self):
+        # H = 11.9, r_punch=4.5, r_die=6.0, t=1.5 → min = 12.0
+        result = run(H=11.9)
+        assert result.has_errors
+
+    def test_H_above_minimum_no_height_error(self):
+        result = run(H=13.0)
+        height_errors = [e for e in result.errors if "altura" in e.lower()]
+        assert len(height_errors) == 0
+
 
 # ---------------------------------------------------------------------------
 # Material properties — blocking errors
@@ -236,3 +264,87 @@ class TestValidateCustomMaterial:
     def test_ys_greater_than_uts(self):
         result = validate_custom_material(uts=300.0, ys=400.0)
         assert result.has_errors
+
+
+# ---------------------------------------------------------------------------
+# validate_pass_heights / _estimate_min_H
+# ---------------------------------------------------------------------------
+
+class TestValidatePassHeights:
+
+    def _run_sequence(self, d_i, H, d_f, t, r_punch, r_die, m1_lim, mn_lim,
+                      trim=0.03):
+        blank = compute_blank(d_i=d_i, H=H, d_f=d_f, t=t,
+                              r_punch=r_punch, trim_fraction=trim)
+        seq = compute_pass_sequence(
+            d_blank=blank.d_blank_final,
+            d_i=d_i, H=H, t=t,
+            r_die_final=r_die, r_punch_final=r_punch,
+            m1_lim=m1_lim, mn_lim=mn_lim,
+            d_f=d_f,
+        )
+        return seq
+
+    def test_standard_cup_passes(self):
+        """Standard steel cup — all passes must have sufficient height."""
+        seq = self._run_sequence(
+            d_i=80.0, H=60.0, d_f=120.0, t=1.5,
+            r_punch=4.5, r_die=6.0,
+            m1_lim=0.50, mn_lim=0.75,
+        )
+        result = validate_pass_heights(
+            seq_res=seq, r_punch=4.5, r_die=6.0, t=1.5,
+            d_i=80.0, d_f=120.0, m1_lim=0.50, mn_lim=0.75,
+        )
+        assert result.is_valid, result.errors
+
+    def test_very_shallow_cup_fails(self):
+        """Wide flange with shallow H — first pass height should be too low."""
+        seq = self._run_sequence(
+            d_i=100.0, H=14.0, d_f=300.0, t=1.5,
+            r_punch=4.5, r_die=6.0,
+            m1_lim=0.50, mn_lim=0.75,
+        )
+        result = validate_pass_heights(
+            seq_res=seq, r_punch=4.5, r_die=6.0, t=1.5,
+            d_i=100.0, d_f=300.0, m1_lim=0.50, mn_lim=0.75,
+        )
+        assert result.has_errors
+
+    def test_estimate_min_H_exceeds_geometric_min(self):
+        """For a problematic case, estimate must exceed geometric minimum."""
+        min_H = _estimate_min_H(
+            d_i=100.0, d_f=300.0, t=1.5,
+            r_punch=4.5, r_die=6.0,
+            m1_lim=0.50, mn_lim=0.75,
+        )
+        geom_min = 4.5 + 6.0 + 1.5  # = 12
+        assert min_H > geom_min, (
+            f"min_H {min_H} should exceed geometric min {geom_min}"
+        )
+
+    def test_estimate_min_H_standard_cup_is_geometric_min(self):
+        """Standard cup already passes at geometric minimum."""
+        min_H = _estimate_min_H(
+            d_i=80.0, d_f=120.0, t=1.5,
+            r_punch=4.5, r_die=6.0,
+            m1_lim=0.50, mn_lim=0.75,
+        )
+        geom_min = 4.5 + 6.0 + 1.5  # = 12
+        assert min_H == pytest.approx(geom_min, abs=1.0), (
+            f"min_H {min_H} should be close to geometric min {geom_min}"
+        )
+
+    def test_validate_pass_heights_estimate_message(self):
+        """Error message must include the suggested minimum H."""
+        seq = self._run_sequence(
+            d_i=100.0, H=14.0, d_f=300.0, t=1.5,
+            r_punch=4.5, r_die=6.0,
+            m1_lim=0.50, mn_lim=0.75,
+        )
+        result = validate_pass_heights(
+            seq_res=seq, r_punch=4.5, r_die=6.0, t=1.5,
+            d_i=100.0, d_f=300.0, m1_lim=0.50, mn_lim=0.75,
+        )
+        assert result.has_errors
+        assert any("mm" in err for err in result.errors)

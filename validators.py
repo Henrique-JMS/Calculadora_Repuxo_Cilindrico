@@ -167,6 +167,39 @@ def _check_die_radius(result: ValidationResult, r_die: float, t: float) -> None:
         )
 
 
+def _check_minimum_height(
+    result: ValidationResult,
+    H: float,
+    r_punch: float,
+    r_die: float,
+    t: float,
+) -> None:
+    """
+    Block if H is too small to accommodate the punch and die fillet radii.
+
+    The punch fillet has a vertical extent of r_punch, and the die fillet
+    has a vertical extent of r_die. The wall must have at least zero
+    straight length between them:
+
+        inner wall:  y ∈ [r_punch,  H - r_die]        → H >= r_punch + r_die
+        outer wall:  y ∈ [H - t - r_die,  r_punch]    → H >= r_punch + r_die + t
+
+    When H < r_punch + r_die + t, the rendered wall segments invert or
+    overlap (inverted outer wall, die fillet arcs below bottom of cup).
+    """
+    if H <= 0 or r_punch <= 0 or r_die <= 0 or t <= 0:
+        return
+    min_H = r_punch + r_die + t
+    if H < min_H:
+        result.add_error(
+            f"Altura H = {H:.2f} mm é insuficiente. "
+            f"O mínimo necessário para acomodar os raios do punção ({r_punch:.2f} mm) "
+            f"e da matriz ({r_die:.2f} mm) com espessura t = {t:.2f} mm "
+            f"é H ≥ r_punção + r_matriz + t = {min_H:.2f} mm. "
+            "Valores menores produzem geometria degenerada (paredes invertidas)."
+        )
+
+
 def _check_punch_radius(result: ValidationResult, r_punch: float, t: float) -> None:
     """
     Block if punch radius is below absolute minimum (2t).
@@ -356,6 +389,9 @@ def validate_inputs(
         _check_die_radius(result, r_die, t)
         _check_punch_radius(result, r_punch, t)
 
+    # ---- Minimum wall height (geometric constraint) ------------------------
+    _check_minimum_height(result, H, r_punch, r_die, t)
+
     # ---- Material properties -----------------------------------------------
     _check_material_properties(result, uts, ys)
 
@@ -371,6 +407,136 @@ def validate_inputs(
         _check_drawability(result, d_i, d_f, H, t, m1_lim)
 
     return result
+
+
+def validate_pass_heights(
+    seq_res,
+    r_punch: float,
+    r_die: float,
+    t: float,
+    d_i: float,
+    d_f: float,
+    m1_lim: float,
+    mn_lim: float,
+    trim_fraction: float = 0.03,
+) -> ValidationResult:
+    """
+    Validate that every pass in the sequence has sufficient wall height
+    to avoid rendering glitches (inverted wall segments, overlapping arcs).
+
+    Intermediate passes can have heights significantly lower than the
+    final H, especially the first pass when the blank is close to the
+    flange diameter. They must still be >= r_punch + r_die + t.
+
+    If any pass fails, this function estimates a minimum viable H for
+    the final product and includes it in the error message.
+
+    Args:
+        seq_res      : PassSequenceResult from compute_pass_sequence().
+        r_punch      : Punch corner radius (mm).
+        r_die        : Die corner radius (mm).
+        t            : Sheet thickness (mm).
+        d_i          : Internal diameter (mm) — for estimation.
+        d_f          : Flange outer diameter (mm) — for estimation.
+        m1_lim       : 1st-pass drawing coefficient — for estimation.
+        mn_lim       : Subsequent-pass drawing coefficient — for estimation.
+        trim_fraction: Blank trim allowance fraction — for estimation.
+
+    Returns:
+        ValidationResult. If non-empty, the calculation should be blocked.
+    """
+    result = ValidationResult()
+
+    min_height = r_punch + r_die + t
+    low_passes = []
+
+    for p in seq_res.passes:
+        if p.height < min_height:
+            low_passes.append(p.pass_number)
+
+    if not low_passes:
+        return result
+
+    # Estimate minimum viable H for the final product
+    min_H_suggested = _estimate_min_H(
+        d_i=d_i, d_f=d_f, t=t,
+        r_punch=r_punch, r_die=r_die,
+        m1_lim=m1_lim, mn_lim=mn_lim,
+        trim_fraction=trim_fraction,
+    )
+
+    if len(low_passes) == 1:
+        msg = (
+            f"O passe {low_passes[0]} tem altura insuficiente para os "
+            f"raios do punção ({r_punch:.1f} mm) e da matriz ({r_die:.1f} mm) "
+            f"com espessura t = {t:.1f} mm. "
+            f"Aumente a altura final H para pelo menos {min_H_suggested:.1f} mm."
+        )
+    else:
+        passes_str = ", ".join(str(pn) for pn in low_passes)
+        msg = (
+            f"Os passes {passes_str} têm altura insuficiente para os "
+            f"raios do punção ({r_punch:.1f} mm) e da matriz ({r_die:.1f} mm) "
+            f"com espessura t = {t:.1f} mm. "
+            f"Aumente a altura final H para pelo menos {min_H_suggested:.1f} mm."
+        )
+
+    result.add_error(msg)
+    return result
+
+
+def _estimate_min_H(
+    d_i: float,
+    d_f: float,
+    t: float,
+    r_punch: float,
+    r_die: float,
+    m1_lim: float,
+    mn_lim: float,
+    trim_fraction: float = 0.03,
+) -> float:
+    """
+    Find the minimum final-part height H such that every pass has
+    height >= r_punch + r_die + t.
+
+    Uses iterative search with a growing step. Converges quickly
+    because the first-pass height is roughly proportional to H.
+    """
+    from blank_calculator import compute_blank
+    from pass_sequence import compute_pass_sequence
+
+    min_height = r_punch + r_die + t
+    H = max(min_height, 1.0)
+
+    # Step grows geometrically (1.3x) to bracket the right value fast
+    step = max(5.0, H * 0.2)
+
+    for _ in range(50):
+        blank = compute_blank(
+            d_i=d_i, H=H, d_f=d_f, t=t,
+            r_punch=r_punch, trim_fraction=trim_fraction,
+        )
+        seq = compute_pass_sequence(
+            d_blank=blank.d_blank_final,
+            d_i=d_i, H=H, t=t,
+            r_die_final=r_die, r_punch_final=r_punch,
+            m1_lim=m1_lim, mn_lim=mn_lim,
+            d_f=d_f,
+        )
+
+        all_ok = True
+        for p in seq.passes:
+            if p.height < min_height - 0.01:
+                all_ok = False
+                break
+
+        if all_ok:
+            return round(H, 1)
+
+        H += step
+        step *= 1.3
+
+    return round(H, 1)
 
 
 def validate_custom_material(uts: float, ys: float) -> ValidationResult:
