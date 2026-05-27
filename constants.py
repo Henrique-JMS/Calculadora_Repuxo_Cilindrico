@@ -73,13 +73,6 @@ DEFAULT_SAFETY_FACTOR: float = 1.25
 PRESS_EFFICIENCY: float = 0.65
 
 # ---------------------------------------------------------------------------
-# Intermediate pass die radii
-# ---------------------------------------------------------------------------
-
-# For intermediate passes, die radius = INTERMEDIATE_DIE_RADIUS_FACTOR * t
-INTERMEDIATE_DIE_RADIUS_FACTOR: float = 8.0
-
-# ---------------------------------------------------------------------------
 # Trim allowance (margem de apara)
 # ---------------------------------------------------------------------------
 

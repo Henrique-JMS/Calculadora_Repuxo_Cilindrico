@@ -30,8 +30,12 @@ import math
 from dataclasses import dataclass, field
 from typing import List
 
+from blank_calculator import (
+    _area_annular_flange,
+    _area_flat_bottom,
+    _area_punch_fillet,
+)
 from constants import (
-    INTERMEDIATE_DIE_RADIUS_FACTOR,
     DR_GREEN,
     DR_YELLOW,
 )
@@ -115,42 +119,40 @@ def _severity_band(dr: float) -> str:
     return "red"
 
 
-def _height_from_area(D_blank: float, d_cup: float, r_punch: float) -> float:
+def _height_from_area(
+    d_blank: float, d_after: float, t: float,
+    r_punch: float, flange_d: float,
+) -> float:
     """
-    Estimate cup height at a given intermediate diameter using surface-area
-    conservation (no flange assumed for intermediate passes).
+    Estimate cup height at a given intermediate diameter using full
+    surface-area conservation including the flange at that stage.
 
-    The height is derived by equating the blank area to the cup area:
-        π/4 * D_blank² = π/4 * (d_cup - 2r_punch)²   [flat bottom]
-                        + π²/2 * r_punch * (d_cup - 2r_punch) + 2π*r_punch²  [fillet]
-                        + π * d_cup * H_wall  [wall]
+    A_blank = A_bottom + A_fillet + A_wall + A_flange
 
-    Solving for H_wall:
-        H_wall = [D_blank²/4 - d_cup²/4 + r_punch*(d_cup/2 - r_punch/2) - r_punch²/2
-                  ... (simplified for intermediate passes without flange)] / d_cup
-
-    For simplicity we use the classical approximation (no fillet correction)
-    and add a small fillet correction term. The final pass height is always
-    taken from the user input H directly.
+    Solving for H:
+        H = (A_blank - A_bottom - A_fillet - A_flange) / (π · d_i)
 
     Args:
-        D_blank : Blank diameter (mm).
-        d_cup   : Cup outer diameter at this pass (mm). Using d_after.
-        r_punch : Punch radius for this pass (mm).
+        d_blank  : Blank diameter (mm).
+        d_after  : Neutral cup diameter after this pass (mm).
+        t        : Sheet thickness (mm).
+        r_punch  : Punch corner radius for this pass (mm).
+        flange_d : Flange outer diameter at this pass (mm).
 
     Returns:
         Estimated wall height (mm). Always >= 0.
     """
-    # Classical formula: D² = d² + 4dH  →  H = (D² - d²) / (4d)
-    # (valid for no-fillet, no-flange cup; good enough for intermediate passes)
-    H_approx = (D_blank**2 - d_cup**2) / (4.0 * d_cup)
+    d_i_pass = d_after - t                   # internal diameter at this pass
+    A_blank  = math.pi / 4.0 * d_blank ** 2
 
-    # Fillet correction: subtract the height contribution of the punch radius
-    # (the fillet region replaces the bottom of the wall)
-    if r_punch > 0:
-        H_approx -= r_punch * (1.0 - math.pi / 4.0)
+    A_bottom = _area_flat_bottom(d_i_pass, r_punch)
+    A_fillet = _area_punch_fillet(d_i_pass, r_punch)
+    A_flange = _area_annular_flange(flange_d, d_i_pass, t)
 
-    return max(H_approx, 0.0)
+    A_wall = A_blank - A_bottom - A_fillet - A_flange
+    if d_i_pass > 0 and A_wall > 0:
+        return A_wall / (math.pi * d_i_pass)
+    return 0.0
 
 
 def _distribute_diameters(
@@ -298,19 +300,9 @@ def compute_pass_sequence(
         m  = d_after / d_before
         dr = d_before / d_after
 
-        # Die radius: use final value for last pass, intermediate factor for others
-        if is_final:
-            r_die = r_die_final
-            r_punch = r_punch_final
-        else:
-            r_die   = INTERMEDIATE_DIE_RADIUS_FACTOR * t
-            r_punch = INTERMEDIATE_DIE_RADIUS_FACTOR * t  # same for intermediates
-
-        # Height: final pass uses user-specified H; intermediates from area formula
-        if is_final:
-            height = H
-        else:
-            height = _height_from_area(d_blank, d_after, r_punch)
+        # Use the same punch and die radii for all passes
+        r_die   = r_die_final
+        r_punch = r_punch_final
 
         # Flange diameter: interpolates between D_blank and d_f based on
         # how much drawing has been done (cup diameter progress).
@@ -330,6 +322,13 @@ def compute_pass_sequence(
                 flange_d = d_outer_wall
         if is_final:
             flange_d = d_f
+
+        # Height: final pass uses user-specified H; intermediates from area formula
+        # accounting for the flange at this stage.
+        if is_final:
+            height = H
+        else:
+            height = _height_from_area(d_blank, d_after, t, r_punch, flange_d)
 
         passes.append(PassData(
             pass_number      = i + 1,

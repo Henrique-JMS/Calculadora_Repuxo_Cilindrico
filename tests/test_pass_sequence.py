@@ -9,6 +9,7 @@ import pytest
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from blank_calculator import compute_blank
 from pass_sequence import compute_pass_sequence, PassSequenceResult, PassData
 
 
@@ -181,6 +182,65 @@ class TestFinalPass:
     def test_final_pass_height_equals_H(self):
         result = run(d_blank=160.0)
         assert result.passes[-1].height == pytest.approx(BASE["H"], rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Height monotonicity — intermediate heights must not exceed final height,
+# and must increase monotonically toward it.
+# ---------------------------------------------------------------------------
+
+class TestHeightMonotonicity:
+
+    def _blank(self, d_i, H, d_f, t, r_punch=4.5):
+        return compute_blank(d_i=d_i, H=H, d_f=d_f, t=t, r_punch=r_punch).d_blank_final
+
+    def test_heights_monotonically_increasing(self):
+        """Standard steel cup — multi-pass, height must grow monotonically."""
+        d_blank = self._blank(80.0, 60.0, 120.0, 1.5)
+        result = run(d_blank=d_blank)
+        heights = [p.height for p in result.passes]
+        for i in range(1, len(heights)):
+            assert heights[i] >= heights[i-1] - 1e-6, (
+                f"Height dropped from {heights[i-1]:.2f} to {heights[i]:.2f} "
+                f"between pass {i} and pass {i+1}"
+            )
+
+    def test_no_intermediate_height_exceeds_final(self):
+        """Intermediate heights must not overshoot the final part height."""
+        d_blank = self._blank(80.0, 60.0, 120.0, 1.5)
+        result = run(d_blank=d_blank)
+        final_h = result.passes[-1].height
+        for p in result.passes[:-1]:
+            assert p.height <= final_h + 1e-6, (
+                f"Intermediate pass {p.pass_number} height {p.height:.2f} "
+                f"exceeds final height {final_h:.2f}"
+            )
+
+    def test_first_pass_height_greater_than_zero(self):
+        result = run(d_blank=160.0)
+        assert result.passes[0].height > 0
+
+    def test_wide_flange_height_monotonic(self):
+        """Large flange, shallow cup — the case that triggered the bug."""
+        d_blank = self._blank(100.0, 40.0, 300.0, 1.5)
+        result = run(d_blank=d_blank, d_i=100.0, H=40.0, d_f=300.0, t=1.5)
+        heights = [p.height for p in result.passes]
+        for i in range(1, len(heights)):
+            assert heights[i] >= heights[i-1] - 1e-6, (
+                f"Height dropped from {heights[i-1]:.2f} to {heights[i]:.2f} "
+                f"(wide flange case)"
+            )
+
+    def test_deep_cup_height_monotonic(self):
+        """Deep cup case — many passes, verify monotonic growth."""
+        d_blank = self._blank(80.0, 120.0, 120.0, 1.5)
+        result = run(d_blank=d_blank, d_i=80.0, H=120.0, d_f=120.0, t=1.5)
+        heights = [p.height for p in result.passes]
+        for i in range(1, len(heights)):
+            assert heights[i] >= heights[i-1] - 1e-6, (
+                f"Height dropped from {heights[i-1]:.2f} to {heights[i]:.2f} "
+                f"(deep cup case)"
+            )
 
 
 # ---------------------------------------------------------------------------
