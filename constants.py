@@ -69,7 +69,8 @@ EXTRACTION_FORCE_FACTOR: float = 0.08   # F_ext = EXTRACTION_FORCE_FACTOR * F_pu
 # Default press capacity safety factor
 DEFAULT_SAFETY_FACTOR: float = 1.25
 
-# Mechanical efficiency of press (for energy/work calculation)
+# Mechanical efficiency of the press mechanism.
+# Used to compute input energy from useful work: W_in = W_useful / η
 PRESS_EFFICIENCY: float = 0.65
 
 # ---------------------------------------------------------------------------

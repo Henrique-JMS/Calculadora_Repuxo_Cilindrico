@@ -66,7 +66,7 @@ class PassForces:
         F_press_N            : Minimum press capacity (N).
         F_press_kN           : Minimum press capacity (kN).
         F_press_tonf         : Minimum press capacity (metric ton-force).
-        energy_J             : Energy per cycle (J).
+        energy_J             : Input energy per cycle (energy the press must supply, J).
         drawing_ratio        : DR for this pass (dimensionless).
         drawing_coeff        : m for this pass (dimensionless).
         severity_dr          : "green" | "yellow" | "red"  (DR band).
@@ -228,12 +228,16 @@ def _press_capacity(F_punch: float, F_bh: float, safety_factor: float) -> float:
 
 def _energy(F_punch: float, height: float) -> float:
     """
-    Energy per cycle (J = N·mm / 1000 → convert mm to m).
+    Input energy per cycle (J). Energy the press must supply.
 
-    W = F_punch × height × efficiency / 1000
+    W_input = F_punch × height / (1000 × PRESS_EFFICIENCY)
     (height in mm → /1000 to convert to m; result in N·m = J)
+
+    The press efficiency (η = PRESS_EFFICIENCY) accounts for mechanical
+    losses in the press drive. The input energy is always greater than
+    the useful work (F_punch × height / 1000).
     """
-    return F_punch * height * PRESS_EFFICIENCY / 1000.0
+    return F_punch * height / (1000.0 * PRESS_EFFICIENCY)
 
 
 # ---------------------------------------------------------------------------

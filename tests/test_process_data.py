@@ -21,12 +21,14 @@ from process_data import (
     _bh_pressure,
     _extraction_force,
     _press_capacity,
+    _energy,
 )
 from constants import (
     SIEBEL_CORRECTION,
     EXTRACTION_FORCE_FACTOR,
     DEFAULT_SAFETY_FACTOR,
     BH_PRESSURE_COEFF,
+    PRESS_EFFICIENCY,
 )
 
 
@@ -109,6 +111,36 @@ class TestForceFormulas:
     def test_press_capacity_formula(self):
         F = _press_capacity(F_punch=10000.0, F_bh=5000.0, safety_factor=1.25)
         assert F == pytest.approx(15000.0 * 1.25, rel=1e-9)
+
+    def test_energy_input_formula(self):
+        # Input energy = F_punch × height / (1000 × η)
+        F = 10000.0   # N
+        H = 60.0      # mm
+        W = _energy(F, H)
+        expected = F * H / (1000.0 * PRESS_EFFICIENCY)
+        assert W == pytest.approx(expected, rel=1e-9)
+
+    def test_energy_greater_than_mechanical_work(self):
+        # Since η < 1, input energy must be > F × H / 1000
+        F = 10000.0
+        H = 60.0
+        W = _energy(F, H)
+        mech_work = F * H / 1000.0
+        assert W > mech_work
+        assert W == pytest.approx(mech_work / PRESS_EFFICIENCY, rel=1e-9)
+
+    def test_energy_scales_linearly_with_force(self):
+        W1 = _energy(5000.0, 60.0)
+        W2 = _energy(10000.0, 60.0)
+        assert W2 == pytest.approx(2.0 * W1, rel=1e-9)
+
+    def test_energy_scales_linearly_with_height(self):
+        W1 = _energy(10000.0, 30.0)
+        W2 = _energy(10000.0, 60.0)
+        assert W2 == pytest.approx(2.0 * W1, rel=1e-9)
+
+    def test_energy_zero_for_zero_force(self):
+        assert _energy(0.0, 60.0) == pytest.approx(0.0, abs=1e-9)
 
 
 # ---------------------------------------------------------------------------
