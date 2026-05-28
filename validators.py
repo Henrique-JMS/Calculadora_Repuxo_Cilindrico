@@ -200,12 +200,18 @@ def _check_minimum_height(
         )
 
 
-def _check_punch_radius(result: ValidationResult, r_punch: float, t: float) -> None:
+def _check_punch_radius(
+    result: ValidationResult,
+    r_punch: float,
+    t: float,
+    d_i: float,
+) -> None:
     """
     Block if punch radius is below absolute minimum (2t).
     Warn if below recommended value (3t).
+    Error if r_punch >= d_i/2 (no flat bottom — degenerate geometry).
     """
-    if r_punch <= 0 or t <= 0:
+    if r_punch <= 0 or t <= 0 or d_i <= 0:
         return
 
     min_r = MIN_PUNCH_RADIUS_FACTOR * t
@@ -217,11 +223,22 @@ def _check_punch_radius(result: ValidationResult, r_punch: float, t: float) -> N
             f"absoluto de {MIN_PUNCH_RADIUS_FACTOR:.0f}t = {min_r:.2f} mm. "
             "Raios menores causam fratura no fundo da peça."
         )
-    elif r_punch < rec_r:
+        return
+
+    if r_punch < rec_r:
         result.add_warning(
             f"Raio do punção r_punch = {r_punch:.2f} mm está abaixo do valor "
             f"recomendado de {RECOMMENDED_PUNCH_RADIUS_FACTOR:.0f}t = {rec_r:.2f} mm. "
             "Considere aumentar para melhorar o fluxo de material."
+        )
+
+    # r_punch >= d_i/2 eliminates the flat bottom entirely
+    if r_punch >= d_i / 2.0:
+        result.add_error(
+            f"Raio do punção r_punch = {r_punch:.2f} mm deve ser menor que "
+            f"d_i/2 = {d_i/2:.2f} mm para que exista um fundo plano. "
+            "Com r_punch ≥ d_i/2 a geometria torna-se degenerada "
+            "(todo o fundo é consumido pelo raio de concordância)."
         )
 
 
@@ -387,7 +404,7 @@ def validate_inputs(
     # ---- Tool radii --------------------------------------------------------
     if t > 0:
         _check_die_radius(result, r_die, t)
-        _check_punch_radius(result, r_punch, t)
+        _check_punch_radius(result, r_punch, t, d_i)
 
     # ---- Minimum wall height (geometric constraint) ------------------------
     _check_minimum_height(result, H, r_punch, r_die, t)

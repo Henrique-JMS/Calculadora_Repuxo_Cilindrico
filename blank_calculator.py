@@ -216,8 +216,10 @@ def compute_blank(
     if trim_fraction < 0:
         raise ValueError(f"trim_fraction must be >= 0. Got {trim_fraction}.")
 
-    # Clamp r_punch if it would eliminate the entire bottom
-    # (geometrically: r_punch < d_i/2 is required for a flat bottom to exist)
+    # Defensive clamp: geometrically r_punch < d_i/2 is required for a flat
+    # bottom to exist. The validator (validators._check_punch_radius) blocks
+    # r_punch >= d_i/2 upstream; this clamp ensures safe operation even when
+    # compute_blank is called directly via the public API.
     r_punch_eff = min(r_punch, d_i / 2.0 - 1e-9)
 
     # ---- Surface area breakdown -------------------------------------------

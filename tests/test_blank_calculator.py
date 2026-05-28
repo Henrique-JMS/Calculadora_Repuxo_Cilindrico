@@ -73,6 +73,28 @@ class TestAreaHelpers:
         A2 = _area_punch_fillet(d_i=80.0, r_punch=6.0)
         assert A2 > A1
 
+    def test_punch_fillet_at_boundary_no_flat_bottom(self):
+        # r_punch = d_i/2 → no flat bottom → fillet area = 2πr_punch²
+        # (flat region term vanishes, only toroid inner edge remains)
+        A = _area_punch_fillet(d_i=20.0, r_punch=10.0)
+        expected = 2.0 * math.pi * 100.0
+        assert A == pytest.approx(expected, rel=1e-6)
+
+    def test_blank_compute_with_large_r_punch_clamps(self):
+        # r_punch > d_i/2 triggers defensive clamp; function still returns
+        # a valid result (no exception) without silent data corruption.
+        result = compute_blank(
+            d_i=80.0, H=60.0, d_f=120.0, t=1.5,
+            r_punch=50.0, trim_fraction=0.0,
+        )
+        # The effective r_punch is clamped to d_i/2 - ε, so blank diameter
+        # must match the d_i/2 case, not the raw r_punch=50 case.
+        clamped = compute_blank(
+            d_i=80.0, H=60.0, d_f=120.0, t=1.5,
+            r_punch=39.999, trim_fraction=0.0,
+        )
+        assert result.d_blank_final == pytest.approx(clamped.d_blank_final, rel=1e-4)
+
 
 # ---------------------------------------------------------------------------
 # compute_blank — output type and fields

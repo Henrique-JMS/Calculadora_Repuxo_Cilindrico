@@ -159,6 +159,28 @@ class TestGeometryErrors:
         assert not result.has_errors
         assert result.has_warnings
 
+    def test_punch_radius_equal_to_di_half_is_error(self):
+        # r_punch = d_i/2 → no flat bottom → blocking error
+        result = run(d_i=80.0, r_punch=40.0)
+        assert result.has_errors
+
+    def test_punch_radius_greater_than_di_half_is_error(self):
+        # r_punch > d_i/2 → degenerate geometry → blocking error
+        result = run(d_i=80.0, r_punch=50.0)
+        assert result.has_errors
+
+    def test_punch_radius_just_below_di_half_passes_no_rp_error(self):
+        # r_punch < d_i/2 → flat bottom exists → no punch-related error
+        result = run(d_i=80.0, r_punch=39.9)
+        rp_errors = [e for e in result.errors if "punção" in e.lower()]
+        assert len(rp_errors) == 0
+
+    def test_punch_radius_di_half_blocks_before_thickness_warning(self):
+        # r_punch >= d_i/2 takes precedence over thickness-based warning
+        # d_i=10, r_punch=6 → r_punch=6 >= d_i/2=5 → error, not just warning
+        result = run(d_i=10.0, r_punch=6.0, t=1.5)
+        assert result.has_errors
+
     def test_H_below_punch_plus_die_plus_t_is_error(self):
         # H = 5, r_punch=4, r_die=4, t=1 → min = 9 → error
         result = run(H=5.0, r_punch=4.0, r_die=4.0, t=1.0)
