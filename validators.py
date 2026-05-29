@@ -124,21 +124,36 @@ def _check_flange_diameter(
     d_f: float,
     d_i: float,
     t: float,
+    r_die: float,
 ) -> None:
     """
     Block if flange diameter is not large enough to form a valid flange.
 
-    Requirement: d_f > d_i + 2*t  (flange width >= t on each side, absolute minimum).
+    Two requirements:
+      1. d_f > d_i + 2*t          (flange width >= t on each side, absolute minimum).
+      2. d_f >= d_i + 2*t + 2*r_die  (enough room for the die fillet radius).
     """
     if d_f <= 0:
-        # Already caught by _check_positive; skip further checks
         return
-    min_d_f = d_i + 2.0 * t
-    if d_f <= min_d_f:
+
+    # Requirement 1 — absolute minimum
+    min_d_f_1 = d_i + 2.0 * t
+    if d_f <= min_d_f_1:
         result.add_error(
             f"Diâmetro da aba d_f = {d_f:.2f} mm é insuficiente. "
-            f"É necessário d_f > d_i + 2t = {min_d_f:.2f} mm "
+            f"É necessário d_f > d_i + 2t = {min_d_f_1:.2f} mm "
             f"para que exista uma aba mínima de espessura t em cada lado."
+        )
+        return
+
+    # Requirement 2 — die fillet must fit within the flange width
+    min_d_f_2 = d_i + 2.0 * t + 2.0 * r_die
+    if d_f < min_d_f_2 - 1e-9:
+        result.add_error(
+            f"Diâmetro da aba d_f = {d_f:.2f} mm é insuficiente para acomodar "
+            f"o raio da matriz r_die = {r_die:.1f} mm. "
+            f"O mínimo necessário é d_f ≥ d_i + 2t + 2·r_die = {min_d_f_2:.2f} mm. "
+            "Valores menores produzem geometria degenerada no contorno do filete da matriz."
         )
 
 
@@ -399,7 +414,7 @@ def validate_inputs(
     # ---- Flange diameter consistency ---------------------------------------
     # Only check if basic positivity already passed
     if d_f > 0 and d_i > 0 and t > 0:
-        _check_flange_diameter(result, d_f, d_i, t)
+        _check_flange_diameter(result, d_f, d_i, t, r_die)
 
     # ---- Tool radii --------------------------------------------------------
     if t > 0:

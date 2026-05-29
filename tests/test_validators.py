@@ -132,10 +132,34 @@ class TestGeometryErrors:
         assert run(d_i=d_i, t=t, d_f=d_f_min).has_errors
 
     def test_df_just_above_minimum_is_ok(self):
-        d_i, t = 80.0, 1.5
-        d_f_ok = d_i + 2.0 * t + 0.1  # = 83.1
-        result = run(d_i=d_i, t=t, d_f=d_f_ok)
-        # May have warnings but should not have this particular error
+        """d_f just above the die-fillet-aware minimum should pass."""
+        d_i, t, r_die = 80.0, 1.5, 6.0
+        d_f_ok = d_i + 2.0 * t + 2.0 * r_die + 0.1  # = 95.1
+        result = run(d_i=d_i, t=t, r_die=r_die, d_f=d_f_ok)
+        flange_errors = [e for e in result.errors if "aba" in e.lower() or "d_f" in e.lower()]
+        assert len(flange_errors) == 0
+
+    def test_df_below_die_fillet_minimum_is_error(self):
+        """d_f is below the die-fillet requirement (d_f < d_i+2t+2*r_die)."""
+        d_i, t, r_die = 80.0, 1.5, 6.0
+        d_f_bad = d_i + 2.0 * t + 2.0 * r_die - 10.0  # = 85.0
+        result = run(d_i=d_i, t=t, r_die=r_die, d_f=d_f_bad)
+        assert result.has_errors
+        assert any("filete" in e.lower() or "matriz" in e.lower() for e in result.errors)
+
+    def test_df_at_die_fillet_minimum_is_ok(self):
+        """d_f exactly equal to d_i+2t+2*r_die should pass."""
+        d_i, t, r_die = 80.0, 1.5, 6.0
+        d_f_min = d_i + 2.0 * t + 2.0 * r_die  # = 95.0
+        result = run(d_i=d_i, t=t, r_die=r_die, d_f=d_f_min)
+        flange_errors = [e for e in result.errors if "aba" in e.lower() or "d_f" in e.lower()]
+        assert len(flange_errors) == 0
+
+    def test_df_just_above_die_fillet_minimum_is_ok(self):
+        """d_f slightly above the die-fillet requirement should pass."""
+        d_i, t, r_die = 80.0, 1.5, 6.0
+        d_f_ok = d_i + 2.0 * t + 2.0 * r_die + 0.1  # = 95.1
+        result = run(d_i=d_i, t=t, r_die=r_die, d_f=d_f_ok)
         flange_errors = [e for e in result.errors if "aba" in e.lower() or "d_f" in e.lower()]
         assert len(flange_errors) == 0
 
