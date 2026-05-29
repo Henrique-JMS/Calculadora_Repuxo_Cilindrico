@@ -382,91 +382,104 @@ def main() -> None:
     # Sidebar inputs
     inputs = _build_sidebar()
 
-    # ---- Trigger: button press OR first load with session state ------------
-    if "result" not in st.session_state:
-        st.session_state.result = None
-
+    # ---- Button click: validate and compute snapshot -----------------------
     if inputs["calc_btn"]:
-        st.session_state.trigger = True
+        # Validation ---------------------------------------------------------
+        validation = validate_inputs(
+            d_i=inputs["d_i"], H=inputs["H"], d_f=inputs["d_f"], t=inputs["t"],
+            r_die=inputs["r_die"], r_punch=inputs["r_punch"],
+            uts=inputs["uts"], ys=inputs["ys"],
+            m1_lim=inputs["m1_lim"], mn_lim=inputs["mn_lim"],
+        )
 
-    if not getattr(st.session_state, "trigger", False):
+        if validation.has_errors:
+            st.session_state.snapshot = None
+            st.error("**Erros nos parâmetros de entrada — corrija antes de prosseguir:**")
+            for err in validation.errors:
+                st.error(f"• {err}")
+            st.stop()
+
+        if validation.has_warnings:
+            for warn in validation.warnings:
+                st.warning(f"⚠️ {warn}")
+
+        # Computation --------------------------------------------------------
+        with st.spinner("Calculando sequência de repuxo…"):
+            blank_res = compute_blank(
+                d_i=inputs["d_i"], H=inputs["H"], d_f=inputs["d_f"], t=inputs["t"],
+                r_punch=inputs["r_punch"], trim_fraction=inputs["trim_fraction"],
+            )
+            seq_res = compute_pass_sequence(
+                d_blank=blank_res.d_blank_final,
+                d_i=inputs["d_i"], H=inputs["H"], t=inputs["t"],
+                r_die_final=inputs["r_die"], r_punch_final=inputs["r_punch"],
+                m1_lim=inputs["m1_lim"], mn_lim=inputs["mn_lim"],
+                d_f=inputs["d_f"],
+            )
+
+            height_validation = validate_pass_heights(
+                seq_res=seq_res,
+                r_punch=inputs["r_punch"],
+                r_die=inputs["r_die"],
+                t=inputs["t"],
+                d_i=inputs["d_i"],
+                d_f=inputs["d_f"],
+                m1_lim=inputs["m1_lim"],
+                mn_lim=inputs["mn_lim"],
+                trim_fraction=inputs["trim_fraction"],
+            )
+            if height_validation.has_errors:
+                st.session_state.snapshot = None
+                for err in height_validation.errors:
+                    st.error(f"• {err}")
+                st.stop()
+
+            proc_res = compute_process_data(
+                passes_geom=seq_res.passes,
+                d_blank=blank_res.d_blank_final,
+                d_f=inputs["d_f"], H=inputs["H"], t=inputs["t"],
+                uts=inputs["uts"], ys=inputs["ys"],
+                safety_factor=inputs["safety_factor"],
+            )
+
+        # Save snapshot of inputs and results for stable display
+        st.session_state.snapshot = {
+            "blank": blank_res,
+            "sequence": seq_res,
+            "process": proc_res,
+            "inputs": inputs,
+        }
+
+    # ---- No snapshot yet → show initial screen -----------------------------
+    if "snapshot" not in st.session_state or st.session_state.snapshot is None:
         st.info(
             "👈  Preencha os parâmetros na barra lateral e clique em **Calcular** "
             "para iniciar o dimensionamento."
         )
         st.stop()
 
-    # ---- Validation --------------------------------------------------------
-    validation = validate_inputs(
-        d_i=inputs["d_i"], H=inputs["H"], d_f=inputs["d_f"], t=inputs["t"],
-        r_die=inputs["r_die"], r_punch=inputs["r_punch"],
-        uts=inputs["uts"], ys=inputs["ys"],
-        m1_lim=inputs["m1_lim"], mn_lim=inputs["mn_lim"],
-    )
+    # ---- Display results from snapshot (stable, not live widget values) ----
+    snap = st.session_state.snapshot
+    blank_res    = snap["blank"]
+    seq_res      = snap["sequence"]
+    proc_res     = snap["process"]
+    snap_inputs  = snap["inputs"]
 
-    if validation.has_errors:
-        st.error("**Erros nos parâmetros de entrada — corrija antes de prosseguir:**")
-        for err in validation.errors:
-            st.error(f"• {err}")
-        st.stop()
-
-    if validation.has_warnings:
-        for warn in validation.warnings:
-            st.warning(f"⚠️ {warn}")
-
-    # ---- Computation -------------------------------------------------------
-    with st.spinner("Calculando sequência de repuxo…"):
-        blank_res = compute_blank(
-            d_i=inputs["d_i"], H=inputs["H"], d_f=inputs["d_f"], t=inputs["t"],
-            r_punch=inputs["r_punch"], trim_fraction=inputs["trim_fraction"],
-        )
-        seq_res = compute_pass_sequence(
-            d_blank=blank_res.d_blank_final,
-            d_i=inputs["d_i"], H=inputs["H"], t=inputs["t"],
-            r_die_final=inputs["r_die"], r_punch_final=inputs["r_punch"],
-            m1_lim=inputs["m1_lim"], mn_lim=inputs["mn_lim"],
-            d_f=inputs["d_f"],
-        )
-
-        # Validate intermediate pass heights before showing results
-        height_validation = validate_pass_heights(
-            seq_res=seq_res,
-            r_punch=inputs["r_punch"],
-            r_die=inputs["r_die"],
-            t=inputs["t"],
-            d_i=inputs["d_i"],
-            d_f=inputs["d_f"],
-            m1_lim=inputs["m1_lim"],
-            mn_lim=inputs["mn_lim"],
-            trim_fraction=inputs["trim_fraction"],
-        )
-        if height_validation.has_errors:
-            for err in height_validation.errors:
-                st.error(f"• {err}")
-            st.stop()
-
-        proc_res = compute_process_data(
-            passes_geom=seq_res.passes,
-            d_blank=blank_res.d_blank_final,
-            d_f=inputs["d_f"], H=inputs["H"], t=inputs["t"],
-            uts=inputs["uts"], ys=inputs["ys"],
-            safety_factor=inputs["safety_factor"],
-        )
-
-    # ---- Display results ---------------------------------------------------
     _show_summary(blank_res, seq_res, proc_res)
     st.markdown("---")
     _show_severity(proc_res.severity, blank_res)
     st.markdown("---")
-    _show_blank_detail(blank_res, inputs["t"])
+    _show_blank_detail(blank_res, snap_inputs["t"])
     st.markdown("---")
     _show_passes_table(seq_res, proc_res)
     _show_forces_detail(proc_res)
     st.markdown("---")
     _show_drawings(blank_res, seq_res,
-                   t=inputs["t"], d_f=inputs["d_f"], d_i=inputs["d_i"])
+                   t=snap_inputs["t"], d_f=snap_inputs["d_f"],
+                   d_i=snap_inputs["d_i"])
     st.markdown("---")
-    _show_dxf_download(blank_res, seq_res, t=inputs["t"], d_f=inputs["d_f"])
+    _show_dxf_download(blank_res, seq_res,
+                       t=snap_inputs["t"], d_f=snap_inputs["d_f"])
 
     st.markdown("---")
     st.caption(
