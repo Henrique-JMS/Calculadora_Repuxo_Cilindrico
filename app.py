@@ -107,6 +107,37 @@ def _section(title: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Float input helper — text_input that returns a validated float
+# ---------------------------------------------------------------------------
+
+def _float_input(
+    container,
+    label: str,
+    value: float,
+    min_value: float,
+    max_value: float,
+    step: float,
+    format_str: str,
+    help: str | None = None,
+) -> float:
+    """
+    Sidebar-friendly float input without spinner or scroll-capture.
+
+    Uses st.text_input internally, parses and validates the result.
+    On invalid input (parse error, out of range) the previous valid
+    *value* is returned silently.
+    """
+    s = container.text_input(label, value=format_str % value, help=help)
+    try:
+        v = float(s.replace(",", "."))
+    except ValueError:
+        return value
+    if v < min_value or v > max_value:
+        return value
+    return v
+
+
+# ---------------------------------------------------------------------------
 # Sidebar — inputs
 # ---------------------------------------------------------------------------
 
@@ -118,24 +149,24 @@ def _build_sidebar() -> dict:
     # ---- Geometry ----------------------------------------------------------
     st.sidebar.markdown("### 📐 Dimensões da Peça Final")
 
-    d_i = st.sidebar.number_input(
-        "Diâmetro interno d_i (mm)",
-        min_value=1.0, max_value=2000.0, value=80.0, step=0.5, format="%.1f",
+    d_i = _float_input(
+        st.sidebar, "Diâmetro interno d_i (mm)",
+        80.0, 1.0, 2000.0, 0.5, "%.1f",
         help="Diâmetro interno do cilindro acabado, medido pela superfície interna."
     )
-    H = st.sidebar.number_input(
-        "Altura da parede H (mm)",
-        min_value=0.1, max_value=2000.0, value=60.0, step=0.5, format="%.1f",
+    H = _float_input(
+        st.sidebar, "Altura da parede H (mm)",
+        60.0, 0.1, 2000.0, 0.5, "%.1f",
         help="Altura da parede cilíndrica — do fundo interno até a base da aba."
     )
-    d_f = st.sidebar.number_input(
-        "Diâmetro da aba d_f (mm)",
-        min_value=1.0, max_value=3000.0, value=120.0, step=0.5, format="%.1f",
+    d_f = _float_input(
+        st.sidebar, "Diâmetro da aba d_f (mm)",
+        120.0, 1.0, 3000.0, 0.5, "%.1f",
         help="Diâmetro externo da aba plana. Deve ser maior que d_i + 2t."
     )
-    t = st.sidebar.number_input(
-        "Espessura da chapa t (mm)",
-        min_value=0.1, max_value=20.0, value=1.5, step=0.1, format="%.2f",
+    t = _float_input(
+        st.sidebar, "Espessura da chapa t (mm)",
+        1.5, 0.1, 20.0, 0.1, "%.2f",
         help="Espessura nominal da chapa metálica (blank)."
     )
 
@@ -143,14 +174,14 @@ def _build_sidebar() -> dict:
     r_die_default   = round(max(4.0 * t, 3.0), 1)
     r_punch_default = round(max(3.0 * t, 2.0), 1)
 
-    r_die = st.sidebar.number_input(
-        "Raio da matriz r_die (mm)",
-        min_value=0.1, max_value=100.0, value=r_die_default, step=0.1, format="%.1f",
+    r_die = _float_input(
+        st.sidebar, "Raio da matriz r_die (mm)",
+        r_die_default, 0.1, 100.0, 0.1, "%.1f",
         help=f"Raio de concordância da borda da matriz. Mínimo recomendado: 4t = {4*t:.1f} mm."
     )
-    r_punch = st.sidebar.number_input(
-        "Raio do punção r_punch (mm)",
-        min_value=0.1, max_value=100.0, value=r_punch_default, step=0.1, format="%.1f",
+    r_punch = _float_input(
+        st.sidebar, "Raio do punção r_punch (mm)",
+        r_punch_default, 0.1, 100.0, 0.1, "%.1f",
         help=f"Raio de concordância do punção (fundo–parede). Mínimo recomendado: 3t = {3*t:.1f} mm."
     )
 
@@ -165,12 +196,8 @@ def _build_sidebar() -> dict:
 
     if mat_choice == CUSTOM_KEY:
         col1, col2 = st.sidebar.columns(2)
-        with col1:
-            uts = col1.number_input("UTS (MPa)", min_value=1.0, value=310.0,
-                                    step=5.0, format="%.1f")
-        with col2:
-            ys = col2.number_input("Ys (MPa)", min_value=1.0, value=175.0,
-                                   step=5.0, format="%.1f")
+        uts = _float_input(col1, "UTS (MPa)", 310.0, 1.0, 9999.0, 5.0, "%.1f")
+        ys = _float_input(col2, "Ys (MPa)", 175.0, 1.0, 9999.0, 5.0, "%.1f")
         m1_lim = st.sidebar.slider("m₁ lim (1° passe)", 0.40, 0.70, 0.50, 0.01)
         mn_lim = st.sidebar.slider("mₙ lim (passes subs.)", 0.60, 0.90, 0.75, 0.01)
     else:
@@ -196,7 +223,7 @@ def _build_sidebar() -> dict:
         )
 
     st.sidebar.markdown("---")
-    calc_btn = st.sidebar.button("🚀 Calcular", type="primary", use_container_width=True)
+    calc_btn = st.sidebar.button("🚀 Calcular", type="primary", width='stretch')
 
     return dict(
         d_i=d_i, H=H, d_f=d_f, t=t,
@@ -307,7 +334,7 @@ def _show_passes_table(seq, proc) -> None:
         })
 
     df = pd.DataFrame(rows)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width='stretch', hide_index=True)
 
 
 def _show_forces_detail(proc) -> None:
@@ -342,12 +369,12 @@ def _show_drawings(blank_res, seq_res, t, d_f, d_i) -> None:
     tabs = st.tabs(stage_labels)
     for tab, fig in zip(tabs, figs):
         with tab:
-            st.pyplot(fig, use_container_width=True)
+            st.pyplot(fig, width='stretch')
             plt.close(fig)
 
     st.markdown("#### Visão Geral")
     overview = render_overview(blank_res, seq_res, t=t, d_f=d_f)
-    st.pyplot(overview, use_container_width=True)
+    st.pyplot(overview, width='stretch')
     plt.close(overview)
 
 
@@ -367,7 +394,7 @@ def _show_dxf_download(blank_res, seq_res, t, d_f) -> None:
         data=dxf_bytes,
         file_name="repuxo_cilindrico_sequencia.dxf",
         mime="application/dxf",
-        use_container_width=True,
+        width='stretch',
     )
 
 

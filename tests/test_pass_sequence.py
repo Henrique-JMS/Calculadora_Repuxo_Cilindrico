@@ -380,6 +380,73 @@ class TestErrors:
 
 
 # ---------------------------------------------------------------------------
+# Drawing coefficient limits — every pass must respect m1_lim / mn_lim
+# ---------------------------------------------------------------------------
+
+class TestCoefficientLimits:
+
+    def test_20plus_passes_converges_valid(self):
+        """Very large blank → >20 passes, all must respect coefficient limits."""
+        d_blank = 100_000.0
+        result = run(d_blank=d_blank, m1_lim=0.50, mn_lim=0.75,
+                     d_i=80.0, t=1.5, d_f=120.0,
+                     r_die_final=6.0, r_punch_final=4.5, H=60.0)
+        assert result.n_passes > 20
+        assert result.n_passes < 100
+        for i, p in enumerate(result.passes):
+            lim = 0.50 if i == 0 else 0.75
+            assert p.drawing_coeff >= lim - 1e-6, (
+                f"Pass {p.pass_number}: m={p.drawing_coeff:.6f} < lim={lim}"
+            )
+
+    def test_30plus_passes_converges_valid(self):
+        """Even larger blank → >30 passes, still respects all limits."""
+        d_blank = 1_000_000.0
+        result = run(d_blank=d_blank, m1_lim=0.50, mn_lim=0.75,
+                     d_i=80.0, t=1.5, d_f=120.0,
+                     r_die_final=6.0, r_punch_final=4.5, H=60.0)
+        assert result.n_passes > 30
+        for i, p in enumerate(result.passes):
+            lim = 0.50 if i == 0 else 0.75
+            assert p.drawing_coeff >= lim - 1e-6, (
+                f"Pass {p.pass_number}: m={p.drawing_coeff:.6f} < lim={lim}"
+            )
+
+    def test_extreme_dr_raises_error(self):
+        """Extreme DR_total (~10²⁷) must raise ValueError (200-pass guard)."""
+        d_blank = 10.0 ** 30
+        with pytest.raises(ValueError, match="mais de 200 passes"):
+            run(d_blank=d_blank, m1_lim=0.50, mn_lim=0.75,
+                d_i=80.0, t=1.5, d_f=120.0,
+                r_die_final=6.0, r_punch_final=4.5, H=60.0)
+
+    def test_typical_geometry_respects_limits(self):
+        """Standard steel cup — verify limits are respected."""
+        d_blank = 160.0
+        result = run(d_blank=d_blank, m1_lim=0.50, mn_lim=0.75)
+        for i, p in enumerate(result.passes):
+            lim = 0.50 if i == 0 else 0.75
+            assert p.drawing_coeff >= lim - 1e-6, (
+                f"Pass {p.pass_number}: m={p.drawing_coeff:.6f} < lim={lim}"
+            )
+
+    def test_single_pass_respects_m1_lim(self):
+        """Single pass — drawing coeff must be >= m1_lim."""
+        result = run(d_blank=100.0, m1_lim=0.50, mn_lim=0.75)
+        assert result.n_passes == 1
+        assert result.passes[0].drawing_coeff >= 0.50 - 1e-6
+
+    def test_aggressive_material_still_safe(self):
+        """Low m1_lim/mn_lim material — limits must still be respected."""
+        result = run(d_blank=160.0, m1_lim=0.45, mn_lim=0.70)
+        for i, p in enumerate(result.passes):
+            lim = 0.45 if i == 0 else 0.70
+            assert p.drawing_coeff >= lim - 1e-6, (
+                f"Pass {p.pass_number}: m={p.drawing_coeff:.6f} < lim={lim}"
+            )
+
+
+# ---------------------------------------------------------------------------
 # Flange diameter checks
 # ---------------------------------------------------------------------------
 

@@ -272,20 +272,40 @@ def compute_pass_sequence(
     if DR_total <= (1.0 / m1_lim):
         n_passes = 1
     else:
-        # Simulate the sequence with limiting coefficients
+        # Simulate the sequence with limiting coefficients.
+        # The raw sequence always converges because m1_lim, mn_lim < 1.
+        # The generous cap (200) is only an infinite-loop guard for
+        # pathological inputs (DR_total > ~10⁷).
         n_passes = 1
         d_sim = d_blank * m1_lim
+        _MAX_PASSES = 200
         while d_sim > d_target:
             d_sim *= mn_lim
             n_passes += 1
-            if n_passes > 20:
-                # Safety guard; extremely deep draw
-                break
+            if n_passes > _MAX_PASSES:
+                raise ValueError(
+                    f"Geometria requer mais de {_MAX_PASSES} passes de repuxo "
+                    f"(DR_total ≈ {DR_total:.1f}). "
+                    "Reduza a altura H ou o diâmetro do blank."
+                )
 
     # ------------------------------------------------------------------ #
     # Step 2 — distribute diameters                                       #
     # ------------------------------------------------------------------ #
     diameters = _distribute_diameters(d_blank, d_target, n_passes, m1_lim, mn_lim)
+
+    # ------------------------------------------------------------------ #
+    # Step 2b — validate that no pass exceeds its coefficient limit       #
+    # ------------------------------------------------------------------ #
+    for i in range(n_passes):
+        m_check = diameters[i + 1] / diameters[i]
+        lim = m1_lim if i == 0 else mn_lim
+        if m_check < lim - 1e-9:
+            raise ValueError(
+                f"Passe {i+1}: coeficiente de repuxo m = {m_check:.4f} "
+                f"é menor que o limite de {lim:.4f}. "
+                "A geometria da peça excede a capacidade de conformação do material."
+            )
 
     # ------------------------------------------------------------------ #
     # Step 3 — build PassData for each pass                               #
