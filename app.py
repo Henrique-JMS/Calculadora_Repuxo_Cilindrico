@@ -160,12 +160,12 @@ def _build_sidebar() -> dict:
         help="Altura da parede cilíndrica — do fundo interno até a base da aba."
     )
     d_f = _float_input(
-        st.sidebar, "Diâmetro da aba d_f (mm)",
+        st.sidebar, "Diâmetro da aba d_a (mm)",
         120.0, 1.0, 3000.0, 0.5, "%.1f",
-        help="Diâmetro externo da aba plana. Deve ser maior que d_i + 2t."
+        help="Diâmetro externo da aba plana. Deve ser maior que d_i + 2e."
     )
     t = _float_input(
-        st.sidebar, "Espessura da chapa t (mm)",
+        st.sidebar, "Espessura da chapa e (mm)",
         1.5, 0.1, 20.0, 0.1, "%.2f",
         help="Espessura nominal da chapa metálica (blank)."
     )
@@ -175,12 +175,12 @@ def _build_sidebar() -> dict:
     r_punch_default = round(max(3.0 * t, 2.0), 1)
 
     r_die = _float_input(
-        st.sidebar, "Raio da matriz r_die (mm)",
+        st.sidebar, "Raio da matriz r_m (mm)",
         r_die_default, 0.1, 100.0, 0.1, "%.1f",
         help=f"Raio de concordância da borda da matriz. Mínimo recomendado: 4t = {4*t:.1f} mm."
     )
     r_punch = _float_input(
-        st.sidebar, "Raio do punção r_punch (mm)",
+        st.sidebar, "Raio do punção r_p (mm)",
         r_punch_default, 0.1, 100.0, 0.1, "%.1f",
         help=f"Raio de concordância do punção (fundo–parede). Mínimo recomendado: 3t = {3*t:.1f} mm."
     )
@@ -326,7 +326,7 @@ def _show_passes_table(seq, proc) -> None:
             "m": f"{pd_geom.drawing_coeff:.3f}",
             "Redução (%)": f"{pd_geom.reduction_pct:.1f}",
             "F_punch (kN)": f"{pd_force.F_punch_kN:.2f}",
-            "F_BH (kN)": f"{pd_force.F_blank_holder_kN:.2f}",
+            "F_PC (kN)": f"{pd_force.F_blank_holder_kN:.2f}",
             "F_ext (kN)": f"{pd_force.F_extraction_kN:.2f}",
             "F_prensa (kN)": f"{pd_force.F_press_kN:.2f}",
             "F_prensa (tf)": f"{pd_force.F_press_tonf:.2f}",
