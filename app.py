@@ -34,7 +34,7 @@ from materials import (
 )
 from pass_sequence import compute_pass_sequence as _compute_pass_sequence
 from process_data import compute_process_data as _compute_process_data
-from renderer import render_all_stages, render_overview
+from renderer import render_all_stages, render_final_part_full, render_overview
 from validators import validate_inputs, validate_pass_heights
 
 # ---------------------------------------------------------------------------
@@ -398,6 +398,17 @@ def _show_dxf_download(blank_res, seq_res, t, d_f) -> None:
     )
 
 
+def _show_final_part_drawing(d_i, H, d_f, t, r_punch, r_die) -> None:
+    """Full mirrored cross-section drawing of the final part."""
+    _section("🖼️ Vista da Peça Final")
+    fig = render_final_part_full(
+        d_i=d_i, H=H, d_f=d_f, t=t,
+        r_punch=r_punch, r_die=r_die,
+    )
+    st.pyplot(fig, width='stretch')
+    plt.close(fig)
+
+
 # ---------------------------------------------------------------------------
 # Main app
 # ---------------------------------------------------------------------------
@@ -483,6 +494,11 @@ def main() -> None:
         )
 
     # ---- Display results ---------------------------------------------------
+    _show_final_part_drawing(
+        d_i=inputs["d_i"], H=inputs["H"], d_f=inputs["d_f"],
+        t=inputs["t"], r_punch=inputs["r_punch"], r_die=inputs["r_die"],
+    )
+    st.markdown("---")
     _show_summary(blank_res, seq_res, proc_res)
     st.markdown("---")
     _show_severity(proc_res.severity, blank_res)

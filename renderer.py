@@ -417,6 +417,147 @@ def render_pass(pd: PassData, t: float,
     return fig
 
 
+def render_final_part_full(
+    d_i: float,
+    H: float,
+    d_f: float,
+    t: float,
+    r_punch: float,
+    r_die: float,
+) -> plt.Figure:
+    """
+    Render a full (mirrored) cross-section drawing of the final flanged cup
+    with all dimension annotations. Unlike the per-pass figures which show
+    only the right half, this function mirrors the profile across the
+    symmetry axis to produce a complete aesthetic view of the finished part.
+
+    This figure is intended for display at the top of the Streamlit app and
+    is NOT exported to DXF.
+
+    Args:
+        d_i     : Internal diameter of finished cup (mm).
+        H       : Wall height of finished cup (mm).
+        d_f     : Flange outer diameter (mm).
+        t       : Sheet thickness (mm).
+        r_punch : Punch corner radius (mm).
+        r_die   : Die corner radius (mm).
+
+    Returns:
+        matplotlib Figure object with the full mirrored cross-section.
+    """
+    # Build a synthetic PassData for the final part
+    r_i = d_i / 2.0
+    r_f = d_f / 2.0
+
+    # Clamp punch radius to leave a flat bottom
+    r_p = min(r_punch, r_i * 0.99)
+
+    from pass_sequence import PassData as _PassData
+    pd = _PassData(
+        pass_number=0,
+        d_before=0.0,
+        d_after=d_i + t,
+        d_neutral_after=d_i + t,
+        height=H,
+        drawing_coeff=0.0,
+        drawing_ratio=0.0,
+        reduction_pct=0.0,
+        r_die=r_die,
+        r_punch=r_p,
+        severity="green",
+        flange_diameter=d_f,
+        is_final=True,
+    )
+
+    max_r = max(r_f, d_i / 2.0 + t)
+
+    # Aspect ratio
+    ar = max(0.7, min(2.0, (H + t * 4) / (max_r * 2.5)))
+    fig, ax = _make_figure(aspect_ratio=ar)
+    ax.set_title("Peça Final — Vista Completa", fontsize=13, fontweight="bold", pad=12)
+
+    # ---- Fill (right + mirrored left) ------------------------------------
+    rx, ry = _cup_fill_polygon(pd, t, d_f)
+    ax.fill(rx, ry, color=_COLOR_FILL, alpha=0.75, zorder=2)   # right
+    ax.fill(-rx, ry, color=_COLOR_FILL, alpha=0.75, zorder=2)   # left
+
+    # ---- Contour (right + mirrored left) --------------------------------
+    for xs, ys in _cup_profile(pd, t, d_f):
+        ax.plot(xs, ys, color=_COLOR_CONTOUR, lw=_LINE_W_PROFILE,
+                solid_capstyle="round", zorder=3)                 # right
+        ax.plot(-xs, ys, color=_COLOR_CONTOUR, lw=_LINE_W_PROFILE,
+                solid_capstyle="round", zorder=3)                 # left
+
+    # ---- Symmetry axis (limited to part height, avoids crossing dim lines) -
+    ax.plot([0, 0], [-t * 0.5, H * 1.15], color=_COLOR_AXIS,
+            linewidth=_LINE_W_AXIS, linestyle=(0, (8, 3, 2, 3)), zorder=1)
+
+    # ---- Dimensions --------------------------------------------------------
+
+    # Internal diameter d_i (horizontal, centred below cup)
+    dim_y_di = -t * 3.5
+    ax.annotate("", xy=(r_i, dim_y_di), xytext=(-r_i, dim_y_di),
+                arrowprops=dict(arrowstyle="<->", color=_COLOR_DIM, lw=1.0))
+    _add_dim_annotation(ax, f"\u2300i {d_i:.1f} mm", 0, dim_y_di - 2.5)
+
+    # Flange diameter d_f (horizontal, further below)
+    dim_y_df = -t * 6.5
+    ax.annotate("", xy=(r_f, dim_y_df), xytext=(-r_f, dim_y_df),
+                arrowprops=dict(arrowstyle="<->", color=_COLOR_DIM, lw=1.0))
+    _add_dim_annotation(ax, f"\u2300f {d_f:.1f} mm", 0, dim_y_df - 2.5)
+
+    # Height H (vertical, right of profile)
+    dim_x_h = max_r * 1.25
+    ax.annotate("", xy=(dim_x_h, H), xytext=(dim_x_h, 0),
+                arrowprops=dict(arrowstyle="<->", color=_COLOR_DIM, lw=1.0))
+    _add_dim_annotation(ax, f"H {H:.1f} mm", dim_x_h + max_r * 0.12, H / 2,
+                        ha="left")
+
+    # Thickness t (callout on right flange edge)
+    ax.annotate("", xy=(r_f, H), xytext=(r_f + max_r * 0.35, H + t * 4),
+                arrowprops=dict(arrowstyle="->", color=_COLOR_DIM, lw=0.8,
+                                connectionstyle="arc3,rad=0.2"),
+                fontsize=0)
+    _add_dim_annotation(ax, f"t = {t:.2f} mm",
+                        r_f + max_r * 0.35, H + t * 4 + 2)
+
+    # Punch radius r_p (right side, bottom)
+    ax.annotate("", xy=(r_i - r_p * 0.3, r_p * 0.7),
+                xytext=(r_i + max_r * 0.10, -t * 2),
+                arrowprops=dict(arrowstyle="->", color=_COLOR_DIM, lw=0.8,
+                                connectionstyle="arc3,rad=-0.3"),
+                fontsize=0)
+    _add_dim_annotation(ax, f"r\u209A = {r_p:.1f} mm",
+                        r_i + max_r * 0.10, -t * 2 - 3, ha="left")
+
+    # Die radius r_die (left side, top) — mirrored to avoid clashing with H dim
+    ax.annotate("", xy=(-(d_i / 2.0 + t + r_die * 0.3), H - t - r_die * 0.7),
+                xytext=(-max_r * 0.92, H * 0.85),
+                arrowprops=dict(arrowstyle="->", color=_COLOR_DIM, lw=0.8,
+                                connectionstyle="arc3,rad=-0.2"),
+                fontsize=0)
+    _add_dim_annotation(ax, f"r\u2098 = {r_die:.1f} mm",
+                        -max_r * 0.92, H * 0.85 - 3, ha="right")
+
+    # ---- Info box ----------------------------------------------------------
+    info = (f"\u2300i {d_i:.1f} \u00d7 \u2300f {d_f:.1f} mm\n"
+            f"H = {H:.1f} mm  |  t = {t:.2f} mm\n"
+            f"r\u209A = {r_p:.1f}  |  r\u2098 = {r_die:.1f} mm")
+    ax.text(0.02, 0.02, info, transform=ax.transAxes,
+            fontsize=8, va="bottom", fontfamily="monospace",
+            color="#333333",
+            bbox=dict(boxstyle="round,pad=0.5", fc="white", alpha=0.8))
+
+    # ---- Limits and layout -------------------------------------------------
+    pad_x = max_r * 1.45
+    pad_y_top = H * 1.15
+    pad_y_bot = -t * 10
+    ax.set_xlim(-pad_x, pad_x)
+    ax.set_ylim(pad_y_bot, pad_y_top)
+    fig.tight_layout()
+    return fig
+
+
 def render_all_stages(
     blank_res: BlankResult,
     seq_res: PassSequenceResult,
