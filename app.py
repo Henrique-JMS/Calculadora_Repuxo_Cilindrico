@@ -34,6 +34,7 @@ from materials import (
 )
 from pass_sequence import compute_pass_sequence as _compute_pass_sequence
 from process_data import compute_process_data as _compute_process_data
+from gif_renderer import generate_animation_gif as _generate_animation_gif
 from renderer import render_all_stages, render_final_part_full, render_overview
 from validators import validate_inputs, validate_pass_heights
 
@@ -52,6 +53,7 @@ st.set_page_config(
 compute_blank = st.cache_data(_compute_blank)
 compute_pass_sequence = st.cache_data(_compute_pass_sequence)
 compute_process_data = st.cache_data(_compute_process_data)
+generate_gif = st.cache_data(_generate_animation_gif)
 
 # ---------------------------------------------------------------------------
 # Custom CSS
@@ -62,30 +64,29 @@ st.markdown("""
     /* Tighten sidebar padding */
     section[data-testid="stSidebar"] { padding-top: 1rem; }
 
-    /* Metric cards */
+    /* Metric cards — no fixed background so it adapts to dark/light theme */
     div[data-testid="metric-container"] {
-        background: #F0F4F8;
-        border: 1px solid #D0DCE8;
+        border: 1px solid rgba(128, 128, 128, 0.25);
         border-radius: 8px;
         padding: 0.5rem 0.8rem;
     }
 
-    /* Severity badge colours */
-    .badge-green  { background:#E8F5E9; color:#1B5E20;
-                    border:1px solid #A5D6A7; border-radius:6px;
+    /* Severity badge colours — semi-transparent backgrounds work on both themes */
+    .badge-green  { background:rgba(76, 175, 80, 0.15); color:#2E7D32;
+                    border:1px solid rgba(76, 175, 80, 0.4); border-radius:6px;
                     padding:3px 10px; font-weight:600; }
-    .badge-yellow { background:#FFF8E1; color:#7D5100;
-                    border:1px solid #FFE082; border-radius:6px;
+    .badge-yellow { background:rgba(255, 193, 7, 0.15); color:#F57F17;
+                    border:1px solid rgba(255, 193, 7, 0.4); border-radius:6px;
                     padding:3px 10px; font-weight:600; }
-    .badge-red    { background:#FFEBEE; color:#B71C1C;
-                    border:1px solid #EF9A9A; border-radius:6px;
+    .badge-red    { background:rgba(244, 67, 54, 0.15); color:#D32F2F;
+                    border:1px solid rgba(244, 67, 54, 0.4); border-radius:6px;
                     padding:3px 10px; font-weight:600; }
 
-    /* Section headers */
+    /* Section headers — lighter blue works on light and dark backgrounds */
     .section-header {
         font-size: 1.05rem; font-weight: 700;
-        color: #1B3A6B; margin: 1.2rem 0 0.4rem 0;
-        border-bottom: 2px solid #2E6DAD; padding-bottom: 3px;
+        color: #5A9FD4; margin: 1.2rem 0 0.4rem 0;
+        border-bottom: 2px solid #5A9FD4; padding-bottom: 3px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -151,21 +152,21 @@ def _build_sidebar() -> dict:
 
     d_i = _float_input(
         st.sidebar, "Diâmetro interno d_i (mm)",
-        80.0, 1.0, 2000.0, 0.5, "%.1f",
+        60.0, 1.0, 2000.0, 0.5, "%.1f",
         help="Diâmetro interno do cilindro acabado, medido pela superfície interna."
     )
     H = _float_input(
         st.sidebar, "Altura da parede H (mm)",
-        60.0, 0.1, 2000.0, 0.5, "%.1f",
+        50.0, 0.1, 2000.0, 0.5, "%.1f",
         help="Altura da parede cilíndrica — do fundo interno até a base da aba."
     )
     d_f = _float_input(
-        st.sidebar, "Diâmetro da aba d_a (mm)",
+        st.sidebar, "Diâmetro da aba (flange) d_f (mm)",
         120.0, 1.0, 3000.0, 0.5, "%.1f",
         help="Diâmetro externo da aba plana. Deve ser maior que d_i + 2e."
     )
     t = _float_input(
-        st.sidebar, "Espessura da chapa e (mm)",
+        st.sidebar, "Espessura da chapa t (mm)",
         1.5, 0.1, 20.0, 0.1, "%.2f",
         help="Espessura nominal da chapa metálica (blank)."
     )
@@ -222,9 +223,6 @@ def _build_sidebar() -> dict:
             help="Multiplicador aplicado sobre a força total para dimensionar a prensa."
         )
 
-    st.sidebar.markdown("---")
-    calc_btn = st.sidebar.button("🚀 Calcular", type="primary", width='stretch')
-
     return dict(
         d_i=d_i, H=H, d_f=d_f, t=t,
         r_die=r_die, r_punch=r_punch,
@@ -232,7 +230,6 @@ def _build_sidebar() -> dict:
         mat_choice=mat_choice,
         trim_fraction=trim_pct / 100.0,
         safety_factor=safety_factor,
-        calc_btn=calc_btn,
     )
 
 
@@ -409,6 +406,99 @@ def _show_final_part_drawing(d_i, H, d_f, t, r_punch, r_die) -> None:
     plt.close(fig)
 
 
+def _show_animation(blank_res, seq_res, t, d_f, d_i) -> None:
+    """Animated GIF of all stages (blank → final)."""
+    _section("🎬 Animação do Processo")
+    gif_bytes = generate_gif(
+        blank_res, seq_res, t=t, d_f=d_f, d_i=d_i,
+    )
+    st.image(gif_bytes, width='stretch')
+
+
+# ---------------------------------------------------------------------------
+# Glossary dialog
+# ---------------------------------------------------------------------------
+
+from pathlib import Path
+
+
+@st.cache_data
+def _load_glossary() -> list[dict]:
+    """Parse glossario.md into a list of {section, term, location, description}."""
+    text = Path(__file__).parent.joinpath("glossario.md").read_text(encoding="utf-8")
+    entries: list[dict] = []
+    section = None
+    term = None
+    location = ""
+    description = ""
+
+    def _flush() -> None:
+        nonlocal term, location, description
+        if term:
+            entries.append(dict(
+                section=section, term=term,
+                location=location, description=description,
+            ))
+        term = None
+        location = ""
+        description = ""
+
+    for line in text.splitlines():
+        if line.startswith("## "):
+            _flush()
+            section = line.lstrip("# ")
+        elif line.startswith("### "):
+            _flush()
+            term = line.lstrip("# ")
+        elif "**Onde aparece:**" in line:
+            location = line.split("**Onde aparece:**")[-1].strip()
+        elif "**Descrição:**" in line:
+            description = line.split("**Descrição:**")[-1].strip()
+    _flush()
+    return entries
+
+
+@st.dialog("📖 Glossário Técnico", width="large")
+def _glossary_dialog() -> None:
+    query = st.text_input(
+        "🔍  Pesquisar termo...",
+        placeholder="Ex: força, blank, matriz, repuxo...",
+    ).strip().lower()
+
+    entries = _load_glossary()
+
+    if query:
+        filtered = [
+            e for e in entries
+            if query in e["term"].lower()
+            or query in e["description"].lower()
+            or query in e["section"].lower()
+        ]
+    else:
+        filtered = entries
+
+    sections: dict[str, list[dict]] = {}
+    for e in filtered:
+        sections.setdefault(e["section"], []).append(e)
+
+    if not sections:
+        st.info("Nenhum termo encontrado.")
+        return
+
+    st.markdown(f"**{len(filtered)}** termo(s) encontrado(s)  —  "
+                f"{len(sections)} seção(ões)")
+    st.markdown("---")
+
+    for section_name, items in sections.items():
+        st.markdown(f"### {section_name}")
+        for item in items:
+            st.markdown(
+                f"**{item['term']}**  \n"
+                f"{item['description']}"
+            )
+            st.markdown("---")
+
+
 # ---------------------------------------------------------------------------
 # Main app
 # ---------------------------------------------------------------------------
@@ -420,21 +510,16 @@ def main() -> None:
         "Dimensionamento completo do processo de repuxo cilíndrico com aba simples: "
         "blank, sequência de passes, forças e geração de DXF."
     )
+
+    _, col_btn = st.columns([5, 1])
+    with col_btn:
+        if st.button("📖 Glossário Técnico", type="secondary"):
+            _glossary_dialog()
+
     st.markdown("---")
 
-    # Sidebar inputs (live widgets — Enter, sliders, and button all trigger rerun)
+    # Sidebar inputs
     inputs = _build_sidebar()
-
-    # ---- Gate: first click or Enter reveals results ------------------------
-    if inputs["calc_btn"]:
-        st.session_state.has_computed = True
-
-    if not st.session_state.get("has_computed"):
-        st.info(
-            "👈  Preencha os parâmetros na barra lateral e clique em **Calcular** "
-            "para iniciar o dimensionamento."
-        )
-        st.stop()
 
     # ---- Validation --------------------------------------------------------
     validation = validate_inputs(
@@ -498,6 +583,8 @@ def main() -> None:
         d_i=inputs["d_i"], H=inputs["H"], d_f=inputs["d_f"],
         t=inputs["t"], r_punch=inputs["r_punch"], r_die=inputs["r_die"],
     )
+    _show_animation(blank_res, seq_res,
+                    t=inputs["t"], d_f=inputs["d_f"], d_i=inputs["d_i"])
     st.markdown("---")
     _show_summary(blank_res, seq_res, proc_res)
     st.markdown("---")
