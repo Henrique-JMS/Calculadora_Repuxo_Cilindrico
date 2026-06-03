@@ -17,7 +17,10 @@ References:
 
 from __future__ import annotations
 
+import hashlib
 import io
+import json
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -515,6 +518,12 @@ def _glossary_dialog() -> None:
 # Main app
 # ---------------------------------------------------------------------------
 
+def _inputs_hash(inputs: dict) -> str:
+    """Hash dos inputs excluindo estados transientes de botão."""
+    d = {k: v for k, v in inputs.items() if k != "calc_btn"}
+    return hashlib.md5(json.dumps(d, sort_keys=True).encode()).hexdigest()
+
+
 def main() -> None:
     # Header
     st.title("🔩 Calculadora de Repuxo Cilíndrico")
@@ -537,8 +546,16 @@ def main() -> None:
     if "gif_auto_computed" not in st.session_state:
         st.session_state.gif_auto_computed = True
         should_compute = True
+        st.session_state.last_inputs_hash = _inputs_hash(inputs)
+    elif inputs["calc_btn"]:
+        st.session_state.last_inputs_hash = _inputs_hash(inputs)
+        should_compute = True
     else:
-        should_compute = inputs["calc_btn"]
+        if _inputs_hash(inputs) != st.session_state.get("last_inputs_hash"):
+            st.session_state.last_inputs_hash = _inputs_hash(inputs)
+            should_compute = False
+        else:
+            should_compute = st.session_state.get("has_computed", False)
 
     if not should_compute:
         st.info(
@@ -617,6 +634,8 @@ def main() -> None:
                 uts=inputs["uts"], ys=inputs["ys"],
                 safety_factor=inputs["safety_factor"],
             )
+
+    st.session_state.has_computed = True
 
     # ---- Display results ---------------------------------------------------
     _show_final_part_drawing(
