@@ -1,53 +1,135 @@
 # Calculadora de Repuxo Cilíndrico
 
-Aplicação web para dimensionamento completo de processos de repuxo cilíndrico com aba simples. Desenvolvida em Python com deploy via Streamlit.
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial-blue)](LICENSE)
 
-## O que a calculadora faz
+Aplicação web para dimensionamento completo de processos de repuxo cilíndrico com aba simples. Desenvolvida em Python com [Streamlit](https://streamlit.io).
 
-A partir das dimensões do produto final (diâmetro interno, altura, diâmetro da aba, espessura, raios de concordância) e dos dados do material, o sistema calcula automaticamente:
+A partir das dimensões do produto final e dos dados do material, a calculadora determina automaticamente o blank, a sequência de passes, as forças de conformação e gera desenhos técnicos exportáveis.
 
-- **Diâmetro do blank** — por conservação de área superficial, com margem de apara
-- **Número de passes** — sequência mínima para atingir a geometria final
-- **Dimensões por etapa** — diâmetro e altura de cada semi-produto intermediário
-- **Dados técnicos de produção** — força de repuxo, pressão e força do prensa-chapas, área de contato, força de extração, capacidade mínima da prensa
-- **Indicadores de severidade** — t/D, razão de repuxo (DR), relação df/d, H/d — com semáforos visuais
-- **Desenhos DXF** — perfil em corte de cada etapa, do blank ao produto final
+---
+
+## Funcionalidades
+
+### Cálculo de engenharia
+- **Blank** — diâmetro teórico por conservação de área superficial, com margem de apara ajustável (0–10%)
+- **Sequência de passes** — número mínimo de passes e dimensões (diâmetro, altura) de cada etapa intermediária, com distribuição geométrica proporcional
+- **Forças de conformação** — força de repuxo (Siebel), força e pressão do prensa-chapas (Kawai), área de contato, força de extração, capacidade mínima da prensa, energia por ciclo
+- **Indicadores de severidade** — razão t/D, razão de repuxo (DR), relação df/d, relação H/d, exibidos como barras coloridas (verde/amarelo/vermelho)
+
+### Visualizações
+- **Blank** — perfil do disco com cotas
+- **Passe a passe** — perfil em corte de cada etapa (abas organizadas por passe)
+- **Visão geral** — todos os perfis lado a lado em um único gráfico
+- **Corte do copo final** — vista em espelho com cotas completas (d_i, d_f, H, t, r_punch, r_die)
+- **GIF animado** — animação do processo do blank ao copo acabado
+
+### Saída técnica
+- **Arquivo DXF** (R2010) — desenho técnico exportável com camadas nomeadas (CONTORNO, EIXO, COTA, LEGENDA, HATCH), cotas dimensionais, legenda por passe e bloco de título. Compatível com AutoCAD, LibreCAD, FreeCAD.
+- **Tabela de passes** — dados completos por etapa (coeficiente de repuxo, razão de repuxo, redução percentual), com coloração condicional por severidade
+- **Detalhamento de forças** — força de repuxo, prensa-chapas, extração e capacidade da prensa em kN e tf, além de área de contato, pressão e energia
+
+### Experiência do usuário
+- **Glossário técnico pesquisável** — mais de 60 termos em português/inglês com localização no código
+- **Material personalizado** — sliders para definir m₁_lim e mₙ_lim quando o material desejado não está na base
+- **Pré-cache** — resultados pré-computados para valores padrão; sem espera na primeira carga
+- **Validação em duas etapas** — validação de entrada pré-cálculo e validação geométrica pós-cálculo (altura mínima por passe)
+- **Tema visual customizado** — fontes Google (Inter, Roboto Mono), barras de severidade, cartões com hover, layout responsivo
+- **Parâmetros avançados** — margem de apara e fator de segurança da prensa (colapsáveis por padrão)
+
+---
+
+## Como usar
+
+1. **Selecione o material** na barra lateral (ou configure um personalizado)
+2. **Insira as dimensões** do produto final: diâmetro interno (d_i), altura (H), diâmetro da aba (d_f), espessura (t), raio do punção (r_punch), raio da matriz (r_die)
+3. **Ajuste parâmetros avançados** se necessário (margem de apara, fator de segurança)
+4. **Clique em "Calcular"** — o processamento é acionado manualmente; os valores persistem entre execuções
+5. **Explore os resultados**:
+   - Animação GIF do processo
+   - Tabela de passes (com coloração por severidade)
+   - Detalhamento de forças por passe
+   - Abas com desenho de cada etapa
+   - Visão geral com todos os perfis
+   - Download do arquivo DXF
+
+---
+
+## Deploy no Streamlit Cloud
+
+Acesse a calculadora online:
+
+[![Abrir no Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://SEU-APP.streamlit.app)
+
+**https://SEU-APP.streamlit.app**
+
+---
 
 ## Estrutura do projeto
 
 ```
 Calculadora_Repuxo_Cilindrico/
 │
-├── constants.py          # Constantes físicas e coeficientes empíricos
-├── materials.py          # Banco de dados de materiais
-├── validators.py         # Validação de inputs
-├── blank_calculator.py   # Cálculo do blank
-├── pass_sequence.py      # Sequência de passes
-├── process_data.py       # Forças, pressões, capacidade da prensa
-├── dxf_generator.py      # Geração de arquivos DXF
-├── renderer.py           # Renderização matplotlib
-├── app.py                # Interface Streamlit
+├── app.py                   # Interface Streamlit
+├── blank_calculator.py      # Cálculo do blank (conservação de área)
+├── constants.py             # Constantes físicas e coeficientes empíricos
+├── materials.py             # Banco de dados de materiais (6 pré-configurados)
+├── validators.py            # Validação de entrada e geométrica pós-cálculo
+├── pass_sequence.py         # Sequência de passes (distribuição geométrica)
+├── process_data.py          # Forças, pressões, capacidade da prensa, energia
+├── dxf_generator.py         # Geração de arquivos DXF (R2010, camadas, cotas)
+├── renderer.py              # Renderização matplotlib (blank, passes, overview, corte)
+├── gif_renderer.py          # Geração de GIF animado do processo
+├── precache.py              # Pré-cache para inicialização instantânea
 │
-├── tests/
-│   ├── test_materials.py
-│   ├── test_validators.py
-│   ├── test_blank_calculator.py
-│   ├── test_pass_sequence.py
-│   └── test_process_data.py
+├── glossario.md             # Glossário técnico (420 linhas, pesquisável)
+├── requirements.txt         # Dependências
+├── LICENSE                  # PolyForm Noncommercial 1.0.0
+├── .gitignore               # Regras de exclusão
+├── default_cache.pkl        # Cache pré-computado (21 KB)
 │
-├── requirements.txt
-└── README.md
+├── .streamlit/
+│   └── config.toml          # Configuração de tema (dark) e servidor
+│
+├── img/
+│   └── Dimensions.JPG       # Imagem de referência das dimensões de entrada
+│
+└── tests/
+    ├── test_materials.py        # 31 testes
+    ├── test_validators.py       # 59 testes
+    ├── test_blank_calculator.py # 34 testes
+    ├── test_pass_sequence.py    # 48 testes
+    ├── test_process_data.py     # 24 testes
+    ├── test_renderer.py         # 24 testes
+    ├── test_dxf_generator.py    # 28 testes
+    └── test_precache.py         # 4 testes
 ```
+
+---
 
 ## Instalação
 
 ```bash
-git clone https://github.com/seu-usuario/Calculadora_Repuxo_Cilindrico.git
+git clone https://github.com/Henrique-JMS/Calculadora_Repuxo_Cilindrico.git
 cd Calculadora_Repuxo_Cilindrico
+python -m venv .venv
+.venv\Scripts\activate     # Windows
+# source .venv/bin/activate  # Linux / macOS
 pip install -r requirements.txt
 ```
 
-## Rodando os testes
+## Execução local
+
+```bash
+streamlit run app.py
+```
+
+A aplicação abrirá em `http://localhost:8501`.
+
+---
+
+## Testes
+
+O projeto possui **8 suites de teste** com **264 testes**, cobrindo todos os módulos de cálculo, validação, renderização e geração de arquivos.
 
 ```bash
 # Todos os testes com relatório de cobertura
@@ -57,22 +139,34 @@ pytest tests/ -v --cov=. --cov-report=term-missing
 pytest tests/test_blank_calculator.py -v
 ```
 
-## Rodando a aplicação
-
-```bash
-streamlit run app.py
-```
+---
 
 ## Materiais pré-configurados
 
-| Material | UTS (MPa) | Ys (MPa) | m₁_lim | mₙ_lim |
-|---|---|---|---|---|
-| DC01 / DC04 (Aço baixo carbono) | 310 | 175 | 0.50 | 0.75 |
-| Aço inoxidável AISI 304 | 600 | 255 | 0.55 | 0.78 |
-| Alumínio 1100-O | 100 | 38 | 0.53 | 0.76 |
-| Alumínio 3003-H14 | 165 | 140 | 0.52 | 0.75 |
-| Cobre ETP C11000 | 240 | 85 | 0.50 | 0.73 |
-| Latão 70/30 | 350 | 140 | 0.52 | 0.75 |
+| Material | UTS (MPa) | Ys (MPa) | µ | m₁_lim | mₙ_lim |
+|---|---|---|---|---|---|
+| DC01 / DC04 (Aço baixo carbono) | 310 | 175 | 0,12 | 0,50 | 0,75 |
+| Aço inoxidável AISI 304 | 600 | 255 | 0,15 | 0,55 | 0,78 |
+| Alumínio 1100-O (puro, recozido) | 100 | 38 | 0,10 | 0,53 | 0,76 |
+| Alumínio 3003-H14 | 165 | 140 | 0,10 | 0,52 | 0,75 |
+| Cobre ETP C11000 (recozido) | 240 | 85 | 0,10 | 0,50 | 0,73 |
+| Latão 70/30 (CuZn30, recozido) | 350 | 140 | 0,12 | 0,52 | 0,75 |
+
+> Também é possível definir um **material personalizado** manualmente, ajustando UTS, Ys, m₁_lim e mₙ_lim via sliders na interface.
+
+---
+
+## Tecnologias
+
+- [Python](https://www.python.org/) ≥ 3.10
+- [Streamlit](https://streamlit.io/) — interface web
+- [Matplotlib](https://matplotlib.org/) — renderização de perfis
+- [ezdxf](https://ezdxf.mozman.at/) — geração de arquivos DXF
+- [NumPy](https://numpy.org/) — suporte numérico
+- [Pillow](https://python-pillow.org/) — composição de GIF animado
+- [pytest](https://docs.pytest.org/) — testes automatizados
+
+---
 
 ## Referências
 
@@ -80,10 +174,10 @@ streamlit run app.py
 - Marciniak, Z., Duncan, J.L., Hu, S.J. — *Mechanics of Sheet Metal Forming*, 2ª ed.
 - Schuler GmbH — *Metal Forming Handbook*, Springer, 1998.
 
-## Status do desenvolvimento
+---
 
-- [x] Fase 1 — Núcleo de Cálculo (`constants`, `materials`, `validators`, `blank_calculator`, `pass_sequence`, `process_data`)
-- [x] Fase 2 — Gerador DXF (`dxf_generator`, `renderer`)
-- [x] Fase 3 — Interface Streamlit (`app.py`)
-- [x] Fase 4 — Testes e validação final (213 testes, 100% de aprovação)
-- [ ] Fase 5 — Deploy Streamlit Cloud
+## Licença
+
+**PolyForm Noncommercial License 1.0.0** — Uso pessoal, educacional e de pesquisa permitido. Uso comercial vedado sem consentimento expresso do autor. O software é fornecido "como está", sem garantias de qualquer natureza.
+
+Veja o arquivo [LICENSE](LICENSE) para os termos completos.

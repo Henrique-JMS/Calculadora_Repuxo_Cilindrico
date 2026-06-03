@@ -86,7 +86,7 @@ MAX_TRIM_ALLOWANCE: float = 0.10
 # Punch–die clearance (folga punção-matriz)
 # ---------------------------------------------------------------------------
 
-# Clearance per side: c = t + k * sqrt(1000 * t)
+# Clearance per side: c = t + k * sqrt(10 * t)
 # k values by material group:
 CLEARANCE_K_STEEL:     float = 0.07
 CLEARANCE_K_STAINLESS: float = 0.07

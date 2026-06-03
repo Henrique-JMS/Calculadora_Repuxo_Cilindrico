@@ -10,7 +10,7 @@ Each material entry contains:
     - m1_lim        : Limiting drawing coefficient for the 1st pass (–)
     - mn_lim        : Limiting drawing coefficient for subsequent passes (–)
     - mu            : Coulomb friction coefficient with lubrication (–)
-    - clearance_k   : Punch–die clearance constant k (for c = t + k*sqrt(1000t))
+    - clearance_k   : Punch–die clearance constant k (for c = t + k*sqrt(10t))
     - notes         : Short technical note (str)
 
 All stress values are in MPa. Coefficients are dimensionless.
@@ -87,7 +87,7 @@ class Material:
         """
         Punch–die clearance per side (mm).
 
-        Formula: c = t + k * sqrt(1000 * t)
+        Formula: c = t + k * sqrt(10 * t)
         where k is the material-dependent clearance constant.
 
         Args:
@@ -97,7 +97,7 @@ class Material:
             Clearance per side (mm).
         """
         import math
-        return t + self.clearance_k * math.sqrt(1000.0 * t)
+        return t + self.clearance_k * math.sqrt(10.0 * t)
 
     def __str__(self) -> str:
         return self.name

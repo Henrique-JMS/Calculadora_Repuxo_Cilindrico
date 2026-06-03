@@ -217,7 +217,7 @@ equivalentes em inglês, localização no código e descrição resumida.
 
 ### Folga punção-matriz (clearance) / Punch-die clearance (c)
 - **Onde aparece:** `materials.py:86-100`, `constants.py:89-94`
-- **Descrição:** Folga lateral entre punção e matriz. `c = t + k · √(1000 · t)`, onde k depende do material (0,07 para aços, 0,06 para alumínio e cobre).
+- **Descrição:** Folga lateral entre punção e matriz. `c = t + k · √(10 · t)`, onde k depende do material (0,07 para aços, 0,06 para alumínio e cobre).
 
 ---
 

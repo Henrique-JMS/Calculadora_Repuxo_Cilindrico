@@ -760,6 +760,9 @@ def main() -> None:
         '<div class="footer">'
         'Calculadora de Repuxo Cilíndrico <strong>v1.0</strong>  ·  '
         'Desenvolvido por <a href="https://github.com/Henrique-JMS">Henrique Souza</a>'
+        '<br><small>'
+        '<a href="https://polyformproject.org/licenses/noncommercial/1.0.0">PolyForm Noncommercial License 1.0.0</a>'
+        '</small>'
         '</div>',
         unsafe_allow_html=True,
     )
