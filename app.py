@@ -33,6 +33,7 @@ from materials import (
     list_material_names,
 )
 from pass_sequence import compute_pass_sequence as _compute_pass_sequence
+from precache import inputs_are_default, load_cache as _load_cache
 from process_data import compute_process_data as _compute_process_data
 from gif_renderer import generate_animation_gif as _generate_animation_gif
 from renderer import render_all_stages, render_final_part_full, render_overview
@@ -146,6 +147,8 @@ def _build_sidebar() -> dict:
     """Render all sidebar widgets and return a dict of input values."""
 
     st.sidebar.title("⚙️ Parâmetros de Entrada")
+    calc_btn = st.sidebar.button("🚀 Calcular", type="primary", use_container_width=True)
+    st.sidebar.markdown("---")
 
     # ---- Geometry ----------------------------------------------------------
     st.sidebar.markdown("### 📐 Dimensões da Peça Final")
@@ -230,6 +233,7 @@ def _build_sidebar() -> dict:
         mat_choice=mat_choice,
         trim_fraction=trim_pct / 100.0,
         safety_factor=safety_factor,
+        calc_btn=calc_btn,
     )
 
 
@@ -409,9 +413,11 @@ def _show_final_part_drawing(d_i, H, d_f, t, r_punch, r_die) -> None:
 def _show_animation(blank_res, seq_res, t, d_f, d_i) -> None:
     """Animated GIF of all stages (blank → final)."""
     _section("🎬 Animação do Processo")
-    gif_bytes = generate_gif(
-        blank_res, seq_res, t=t, d_f=d_f, d_i=d_i,
-    )
+    gif_bytes = st.session_state.pop("_precached_gif", None)
+    if gif_bytes is None:
+        gif_bytes = generate_gif(
+            blank_res, seq_res, t=t, d_f=d_f, d_i=d_i,
+        )
     st.image(gif_bytes, width='stretch')
 
 
@@ -521,6 +527,20 @@ def main() -> None:
     # Sidebar inputs
     inputs = _build_sidebar()
 
+    # ---- Gate: auto-compute on first load, button-only afterwards ----------
+    if "gif_auto_computed" not in st.session_state:
+        st.session_state.gif_auto_computed = True
+        should_compute = True
+    else:
+        should_compute = inputs["calc_btn"]
+
+    if not should_compute:
+        st.info(
+            "👈  Altere os parâmetros na barra lateral e clique em **Calcular** "
+            "para atualizar o dimensionamento."
+        )
+        st.stop()
+
     # ---- Validation --------------------------------------------------------
     validation = validate_inputs(
         d_i=inputs["d_i"], H=inputs["H"], d_f=inputs["d_f"], t=inputs["t"],
@@ -539,44 +559,53 @@ def main() -> None:
         for warn in validation.warnings:
             st.warning(f"⚠️ {warn}")
 
+    # ---- Pre-cache (skip computation when inputs match defaults) ----------
+    _precache = None
+    if inputs_are_default(inputs):
+        _precache = _load_cache()
+
     # ---- Computation (cached — identical inputs skip recomputation) --------
-    with st.spinner("Calculando sequência de repuxo…"):
-        blank_res = compute_blank(
-            d_i=inputs["d_i"], H=inputs["H"], d_f=inputs["d_f"], t=inputs["t"],
-            r_punch=inputs["r_punch"], trim_fraction=inputs["trim_fraction"],
-        )
-        seq_res = compute_pass_sequence(
-            d_blank=blank_res.d_blank_final,
-            d_i=inputs["d_i"], H=inputs["H"], t=inputs["t"],
-            r_die_final=inputs["r_die"], r_punch_final=inputs["r_punch"],
-            m1_lim=inputs["m1_lim"], mn_lim=inputs["mn_lim"],
-            d_f=inputs["d_f"],
-        )
+    if _precache is not None:
+        blank_res, seq_res, proc_res, gif_bytes = _precache
+        st.session_state["_precached_gif"] = gif_bytes
+    else:
+        with st.spinner("Calculando sequência de repuxo…"):
+            blank_res = compute_blank(
+                d_i=inputs["d_i"], H=inputs["H"], d_f=inputs["d_f"], t=inputs["t"],
+                r_punch=inputs["r_punch"], trim_fraction=inputs["trim_fraction"],
+            )
+            seq_res = compute_pass_sequence(
+                d_blank=blank_res.d_blank_final,
+                d_i=inputs["d_i"], H=inputs["H"], t=inputs["t"],
+                r_die_final=inputs["r_die"], r_punch_final=inputs["r_punch"],
+                m1_lim=inputs["m1_lim"], mn_lim=inputs["mn_lim"],
+                d_f=inputs["d_f"],
+            )
 
-        # Validate intermediate pass heights before showing results
-        height_validation = validate_pass_heights(
-            seq_res=seq_res,
-            r_punch=inputs["r_punch"],
-            r_die=inputs["r_die"],
-            t=inputs["t"],
-            d_i=inputs["d_i"],
-            d_f=inputs["d_f"],
-            m1_lim=inputs["m1_lim"],
-            mn_lim=inputs["mn_lim"],
-            trim_fraction=inputs["trim_fraction"],
-        )
-        if height_validation.has_errors:
-            for err in height_validation.errors:
-                st.error(f"• {err}")
-            st.stop()
+            # Validate intermediate pass heights before showing results
+            height_validation = validate_pass_heights(
+                seq_res=seq_res,
+                r_punch=inputs["r_punch"],
+                r_die=inputs["r_die"],
+                t=inputs["t"],
+                d_i=inputs["d_i"],
+                d_f=inputs["d_f"],
+                m1_lim=inputs["m1_lim"],
+                mn_lim=inputs["mn_lim"],
+                trim_fraction=inputs["trim_fraction"],
+            )
+            if height_validation.has_errors:
+                for err in height_validation.errors:
+                    st.error(f"• {err}")
+                st.stop()
 
-        proc_res = compute_process_data(
-            passes_geom=seq_res.passes,
-            d_blank=blank_res.d_blank_final,
-            d_f=inputs["d_f"], H=inputs["H"], t=inputs["t"],
-            uts=inputs["uts"], ys=inputs["ys"],
-            safety_factor=inputs["safety_factor"],
-        )
+            proc_res = compute_process_data(
+                passes_geom=seq_res.passes,
+                d_blank=blank_res.d_blank_final,
+                d_f=inputs["d_f"], H=inputs["H"], t=inputs["t"],
+                uts=inputs["uts"], ys=inputs["ys"],
+                safety_factor=inputs["safety_factor"],
+            )
 
     # ---- Display results ---------------------------------------------------
     _show_final_part_drawing(
