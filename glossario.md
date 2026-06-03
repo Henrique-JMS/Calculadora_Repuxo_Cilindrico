@@ -7,7 +7,7 @@ equivalentes em inglês, localização no código e descrição resumida.
 
 ## 1. Geometria da Peça
 
-### Diâmetro interno (d_i) / Internal diameter (d_i)
+### Diâmetro interno (d ou d_i) / Internal diameter (d_i)
 - **Onde aparece:** `app.py:152`, `blank_calculator.py:76`, `pass_sequence.py:238`, `validators.py:388`
 - **Descrição:** Diâmetro interno do cilindro acabado, medido pela superfície interna da parede.
 
@@ -15,11 +15,11 @@ equivalentes em inglês, localização no código e descrição resumida.
 - **Onde aparece:** `app.py:157`, `blank_calculator.py:124`, `pass_sequence.py:239`, `validators.py:389`
 - **Descrição:** Altura da parede cilíndrica — do fundo interno até a base da aba.
 
-### Diâmetro da aba (d_f) / Flange outer diameter (d_f)
+### Diâmetro da aba (Da ou d_f) / Flange outer diameter (d_f)
 - **Onde aparece:** `app.py:162`, `blank_calculator.py:139`, `pass_sequence.py:245`, `validators.py:390`
 - **Descrição:** Diâmetro externo da aba plana. Deve ser maior que `d_i + 2t` para que exista uma aba mínima.
 
-### Espessura da chapa (t) / Sheet thickness (t)
+### Espessura da chapa ('e' ou 't') / Sheet thickness (t)
 - **Onde aparece:** `app.py:168`, `blank_calculator.py:151`, `pass_sequence.py:240`, `validators.py:112`, todos os módulos
 - **Descrição:** Espessura nominal da chapa metálica (blank). Intervalo suportado: 0,1–20,0 mm.
 

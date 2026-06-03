@@ -86,6 +86,8 @@ def _render_full_blank(
 
     # Contour (right + mirrored left)
     for xs, ys in _blank_profile(d, t):
+        if np.all(np.abs(xs) < 1e-9):
+            continue                                                 # skip axis-line segments
         ax.plot(xs,  ys, color=_COLOR_CONTOUR, lw=_LINE_W_PROFILE,
                 solid_capstyle="round", zorder=3)
         ax.plot(-xs, ys, color=_COLOR_CONTOUR, lw=_LINE_W_PROFILE,
@@ -128,6 +130,8 @@ def _render_full_pass(
 
     # Contour (right + mirrored left)
     for xs, ys in _cup_profile(pd, t, flange_d):
+        if np.all(np.abs(xs) < 1e-9):
+            continue                                                 # skip axis-line segments
         ax.plot(xs,  ys, color=_COLOR_CONTOUR, lw=_LINE_W_PROFILE,
                 solid_capstyle="round", zorder=3)
         ax.plot(-xs, ys, color=_COLOR_CONTOUR, lw=_LINE_W_PROFILE,

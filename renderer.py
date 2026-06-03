@@ -483,6 +483,8 @@ def render_final_part_full(
 
     # ---- Contour (right + mirrored left) --------------------------------
     for xs, ys in _cup_profile(pd, t, d_f):
+        if np.all(np.abs(xs) < 1e-9):
+            continue                                                 # skip axis-line segments
         ax.plot(xs, ys, color=_COLOR_CONTOUR, lw=_LINE_W_PROFILE,
                 solid_capstyle="round", zorder=3)                 # right
         ax.plot(-xs, ys, color=_COLOR_CONTOUR, lw=_LINE_W_PROFILE,

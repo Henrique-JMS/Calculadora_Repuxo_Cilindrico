@@ -154,7 +154,7 @@ def _build_sidebar() -> dict:
     st.sidebar.markdown("### 📐 Dimensões da Peça Final")
 
     d_i = _float_input(
-        st.sidebar, "Diâmetro interno d_i (mm)",
+        st.sidebar, "Diâmetro interno d (mm)",
         60.0, 1.0, 2000.0, 0.5, "%.1f",
         help="Diâmetro interno do cilindro acabado, medido pela superfície interna."
     )
@@ -164,12 +164,12 @@ def _build_sidebar() -> dict:
         help="Altura da parede cilíndrica — do fundo interno até a base da aba."
     )
     d_f = _float_input(
-        st.sidebar, "Diâmetro da aba (flange) d_f (mm)",
+        st.sidebar, "Diâmetro da aba (flange) Da (mm)",
         120.0, 1.0, 3000.0, 0.5, "%.1f",
-        help="Diâmetro externo da aba plana. Deve ser maior que d_i + 2e."
+        help="Diâmetro externo da aba plana. Deve ser maior que d + 2e."
     )
     t = _float_input(
-        st.sidebar, "Espessura da chapa t (mm)",
+        st.sidebar, "Espessura da chapa e (mm)",
         1.5, 0.1, 20.0, 0.1, "%.2f",
         help="Espessura nominal da chapa metálica (blank)."
     )
@@ -179,14 +179,14 @@ def _build_sidebar() -> dict:
     r_punch_default = round(max(3.0 * t, 2.0), 1)
 
     r_die = _float_input(
-        st.sidebar, "Raio da matriz r_m (mm)",
+        st.sidebar, "Raio da matriz Rm (mm)",
         r_die_default, 0.1, 100.0, 0.1, "%.1f",
-        help=f"Raio de concordância da borda da matriz. Mínimo recomendado: 4t = {4*t:.1f} mm."
+        help=f"Raio de concordância da borda da matriz. Mínimo recomendado: 4e = {4*t:.1f} mm."
     )
     r_punch = _float_input(
-        st.sidebar, "Raio do punção r_p (mm)",
+        st.sidebar, "Raio do punção Rp (mm)",
         r_punch_default, 0.1, 100.0, 0.1, "%.1f",
-        help=f"Raio de concordância do punção (fundo–parede). Mínimo recomendado: 3t = {3*t:.1f} mm."
+        help=f"Raio de concordância do punção (fundo–parede). Mínimo recomendado: 3e = {3*t:.1f} mm."
     )
 
     # ---- Material ----------------------------------------------------------
@@ -427,6 +427,12 @@ def _show_animation(blank_res, seq_res, t, d_f, d_i) -> None:
 
 from pathlib import Path
 
+_SECTIONS_TO_EXCLUDE = frozenset({
+    "9. Validação",
+    "11. Renderização",
+    "13. Classes (Dataclasses)",
+})
+
 
 @st.cache_data
 def _load_glossary() -> list[dict]:
@@ -461,7 +467,7 @@ def _load_glossary() -> list[dict]:
         elif "**Descrição:**" in line:
             description = line.split("**Descrição:**")[-1].strip()
     _flush()
-    return entries
+    return [e for e in entries if e["section"] not in _SECTIONS_TO_EXCLUDE]
 
 
 @st.dialog("📖 Glossário Técnico", width="large")
@@ -539,6 +545,11 @@ def main() -> None:
             "👈  Altere os parâmetros na barra lateral e clique em **Calcular** "
             "para atualizar o dimensionamento."
         )
+        from pathlib import Path
+        img_path = Path(__file__).parent / "img" / "Dimensions.JPG"
+        if img_path.exists():
+            st.image(str(img_path), caption="Referência das dimensões de entrada",
+                     use_container_width=True)
         st.stop()
 
     # ---- Validation --------------------------------------------------------
