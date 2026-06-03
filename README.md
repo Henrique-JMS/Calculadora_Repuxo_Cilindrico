@@ -40,7 +40,7 @@ Acesse o aplicativo em: https://repuxo.streamlit.app/
 
 ## Como usar
 
-1. **Insira as dimensões** do produto final: diâmetro interno (d_i), altura (H), diâmetro da aba (d_f), espessura (t), raio do punção (r_punch), raio da matriz (r_die)
+1. **Insira as dimensões** do produto final: diâmetro interno (d), altura (H), diâmetro da aba (Da), espessura (e), raio do punção (Rp), raio da matriz (Rm)
 2. **Selecione o material** na barra lateral (ou configure um personalizado)
 3. **Ajuste parâmetros avançados** se necessário (margem de apara, fator de segurança)
 4. **Clique em "Calcular"** — o processamento é acionado manualmente; os valores persistem entre execuções
