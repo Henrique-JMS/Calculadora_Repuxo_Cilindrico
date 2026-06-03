@@ -2,9 +2,11 @@
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Noncommercial-blue)](LICENSE)
 
-Aplicação web para dimensionamento completo de processos de repuxo cilíndrico com aba simples. Desenvolvida em Python com [Streamlit](https://streamlit.io).
+Aplicação web para dimensionamento completo de processos de repuxo cilíndrico com aba simples.
 
 A partir das dimensões do produto final e dos dados do material, a calculadora determina automaticamente o blank, a sequência de passes, as forças de conformação e gera desenhos técnicos exportáveis.
+
+Acesse o aplicativo em: https://repuxo.streamlit.app/
 
 ---
 
@@ -13,14 +15,14 @@ A partir das dimensões do produto final e dos dados do material, a calculadora 
 ### Cálculo de engenharia
 - **Blank** — diâmetro teórico por conservação de área superficial, com margem de apara ajustável (0–10%)
 - **Sequência de passes** — número mínimo de passes e dimensões (diâmetro, altura) de cada etapa intermediária, com distribuição geométrica proporcional
-- **Forças de conformação** — força de repuxo (Siebel), força e pressão do prensa-chapas (Kawai), área de contato, força de extração, capacidade mínima da prensa, energia por ciclo
+- **Forças de conformação** — força de repuxo, força e pressão do prensa-chapas, área de contato, força de extração, capacidade mínima da prensa, energia por ciclo
 - **Indicadores de severidade** — razão t/D, razão de repuxo (DR), relação df/d, relação H/d, exibidos como barras coloridas (verde/amarelo/vermelho)
 
 ### Visualizações
 - **Blank** — perfil do disco com cotas
 - **Passe a passe** — perfil em corte de cada etapa (abas organizadas por passe)
 - **Visão geral** — todos os perfis lado a lado em um único gráfico
-- **Corte do copo final** — vista em espelho com cotas completas (d_i, d_f, H, t, r_punch, r_die)
+- **Corte do copo final** — vista em espelho com cotas completas (d, Da, H, e, Rp, Rm)
 - **GIF animado** — animação do processo do blank ao copo acabado
 
 ### Saída técnica
@@ -31,17 +33,15 @@ A partir das dimensões do produto final e dos dados do material, a calculadora 
 ### Experiência do usuário
 - **Glossário técnico pesquisável** — mais de 60 termos em português/inglês com localização no código
 - **Material personalizado** — sliders para definir m₁_lim e mₙ_lim quando o material desejado não está na base
-- **Pré-cache** — resultados pré-computados para valores padrão; sem espera na primeira carga
 - **Validação em duas etapas** — validação de entrada pré-cálculo e validação geométrica pós-cálculo (altura mínima por passe)
-- **Tema visual customizado** — fontes Google (Inter, Roboto Mono), barras de severidade, cartões com hover, layout responsivo
 - **Parâmetros avançados** — margem de apara e fator de segurança da prensa (colapsáveis por padrão)
 
 ---
 
 ## Como usar
 
-1. **Selecione o material** na barra lateral (ou configure um personalizado)
-2. **Insira as dimensões** do produto final: diâmetro interno (d_i), altura (H), diâmetro da aba (d_f), espessura (t), raio do punção (r_punch), raio da matriz (r_die)
+1. **Insira as dimensões** do produto final: diâmetro interno (d_i), altura (H), diâmetro da aba (d_f), espessura (t), raio do punção (r_punch), raio da matriz (r_die)
+2. **Selecione o material** na barra lateral (ou configure um personalizado)
 3. **Ajuste parâmetros avançados** se necessário (margem de apara, fator de segurança)
 4. **Clique em "Calcular"** — o processamento é acionado manualmente; os valores persistem entre execuções
 5. **Explore os resultados**:
@@ -58,9 +58,9 @@ A partir das dimensões do produto final e dos dados do material, a calculadora 
 
 Acesse a calculadora online:
 
-[![Abrir no Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://SEU-APP.streamlit.app)
+[Abrir no Streamlit](https://repuxo.streamlit.app/)
 
-**https://SEU-APP.streamlit.app**
+**https://repuxo.streamlit.app**
 
 ---
 
