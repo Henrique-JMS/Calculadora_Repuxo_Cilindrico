@@ -64,34 +64,107 @@ generate_gif = st.cache_data(_generate_animation_gif)
 # ---------------------------------------------------------------------------
 
 st.markdown("""
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-    /* Tighten sidebar padding */
-    section[data-testid="stSidebar"] { padding-top: 1rem; }
+    * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    code, pre, .mono { font-family: 'Roboto Mono', 'Cascadia Code', Consolas, monospace; }
 
-    /* Metric cards — no fixed background so it adapts to dark/light theme */
-    div[data-testid="metric-container"] {
-        border: 1px solid rgba(128, 128, 128, 0.25);
-        border-radius: 8px;
-        padding: 0.5rem 0.8rem;
+    /* Sidebar */
+    section[data-testid="stSidebar"] { padding-top: 1rem; }
+    section[data-testid="stSidebar"] h3 {
+        font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
+        color: #5A9FD4; margin-top: 1.5rem; border-left: 3px solid #5A9FD4;
+        padding-left: 0.6rem;
+    }
+    section[data-testid="stSidebar"] .stInfo {
+        font-size: 0.85rem;
     }
 
-    /* Severity badge colours — semi-transparent backgrounds work on both themes */
-    .badge-green  { background:rgba(76, 175, 80, 0.15); color:#2E7D32;
-                    border:1px solid rgba(76, 175, 80, 0.4); border-radius:6px;
-                    padding:3px 10px; font-weight:600; }
-    .badge-yellow { background:rgba(255, 193, 7, 0.15); color:#F57F17;
-                    border:1px solid rgba(255, 193, 7, 0.4); border-radius:6px;
-                    padding:3px 10px; font-weight:600; }
-    .badge-red    { background:rgba(244, 67, 54, 0.15); color:#D32F2F;
-                    border:1px solid rgba(244, 67, 54, 0.4); border-radius:6px;
-                    padding:3px 10px; font-weight:600; }
+    /* Metric cards */
+    div[data-testid="metric-container"] {
+        border: 1px solid rgba(128, 128, 128, 0.18);
+        border-radius: 10px;
+        padding: 0.6rem 0.8rem;
+        background: rgba(128, 128, 128, 0.03);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    div[data-testid="metric-container"]:hover {
+        box-shadow: 0 3px 12px rgba(0,0,0,0.09);
+        transform: translateY(-1px);
+    }
 
-    /* Section headers — lighter blue works on light and dark backgrounds */
+    /* Buttons */
+    .stButton button {
+        transition: all 0.2s ease;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+    .stButton button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    }
+    button[kind="primary"] { font-weight: 600; }
+
+    /* Section headers */
     .section-header {
         font-size: 1.05rem; font-weight: 700;
-        color: #5A9FD4; margin: 1.2rem 0 0.4rem 0;
-        border-bottom: 2px solid #5A9FD4; padding-bottom: 3px;
+        color: #5A9FD4; margin: 1.4rem 0 0.6rem 0;
+        border-bottom: 2px solid rgba(90, 159, 212, 0.3);
+        padding-bottom: 4px;
+        letter-spacing: 0.01em;
     }
+
+    /* Severity gauge bar */
+    .gauge-wrapper {
+        display: flex; align-items: center; gap: 0.5rem;
+        width: 100%;
+    }
+    .gauge-track {
+        flex: 1; height: 7px; background: rgba(128,128,128,0.10);
+        border-radius: 4px; overflow: hidden;
+    }
+    .gauge-bar {
+        height: 100%; border-radius: 4px;
+        transition: width 0.4s ease;
+        min-width: 4px;
+    }
+    .gauge-label {
+        font-weight: 600; font-size: 0.88rem;
+        white-space: nowrap; min-width: 5rem;
+        font-family: 'Roboto Mono', monospace;
+    }
+    .gauge-label-green  { color: #2E7D32; }
+    .gauge-label-yellow { color: #F57F17; }
+    .gauge-label-red    { color: #D32F2F; }
+
+    /* Empty state card */
+    .empty-state {
+        text-align: center; padding: 2.5rem 1.5rem;
+        border: 1px dashed rgba(128,128,128,0.25);
+        border-radius: 12px;
+        background: rgba(128,128,128,0.02);
+        margin: 1rem 0;
+    }
+    .empty-state-icon {
+        font-size: 2.5rem; margin-bottom: 1rem;
+    }
+    .empty-state h4 {
+        color: #5A9FD4; font-weight: 600; margin: 0 0 0.5rem 0;
+    }
+
+    /* Footer */
+    .footer {
+        text-align: center; font-size: 0.78rem;
+        color: rgba(128,128,128,0.55);
+        padding: 1rem 0 0.5rem 0;
+    }
+    .footer a { color: #5A9FD4; text-decoration: none; }
+
+    /* Dataframe */
+    .stDataFrame { border-radius: 8px; overflow: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -100,11 +173,20 @@ st.markdown("""
 # Helper: severity badge HTML
 # ---------------------------------------------------------------------------
 
-def _badge(severity: str, label: str) -> str:
-    cls = f"badge-{severity}"
-    icons = {"green": "✅", "yellow": "⚠️", "red": "🔴"}
-    icon = icons.get(severity, "")
-    return f'<span class="{cls}">{icon} {label}</span>'
+def _gauge_bar(severity: str, value: str) -> str:
+    colors = {"green": "#4CAF50", "yellow": "#FFC107", "red": "#F44336"}
+    widths = {"green": "30%", "yellow": "60%", "red": "90%"}
+    color = colors.get(severity, "#999")
+    w = widths.get(severity, "50%")
+    cls = f"gauge-label-{severity}"
+    return (
+        f'<div class="gauge-wrapper">'
+        f'  <div class="gauge-track">'
+        f'    <div class="gauge-bar" style="width:{w};background:{color};"></div>'
+        f'  </div>'
+        f'  <span class="gauge-label {cls}">{value}</span>'
+        f'</div>'
+    )
 
 
 def _section(title: str) -> None:
@@ -149,8 +231,8 @@ def _float_input(
 def _build_sidebar() -> dict:
     """Render all sidebar widgets and return a dict of input values."""
 
-    st.sidebar.title("⚙️ Parâmetros de Entrada")
-    calc_btn = st.sidebar.button("🚀 Calcular", type="primary", use_container_width=True)
+    st.sidebar.title("Parâmetros de Entrada")
+    calc_btn = st.sidebar.button("Calcular", type="primary", use_container_width=True)
     st.sidebar.markdown("---")
 
     # ---- Geometry ----------------------------------------------------------
@@ -281,7 +363,7 @@ def _show_severity(sev, blank) -> None:
     for col, (label, value, severity), desc in zip(cols, indicators, descriptions):
         with col:
             st.markdown(f"**{label}**", help=desc)
-            st.markdown(_badge(severity, value), unsafe_allow_html=True)
+            st.markdown(_gauge_bar(severity, value), unsafe_allow_html=True)
 
 
 def _show_blank_detail(blank, t) -> None:
@@ -338,7 +420,17 @@ def _show_passes_table(seq, proc) -> None:
         })
 
     df = pd.DataFrame(rows)
-    st.dataframe(df, width='stretch', hide_index=True)
+
+    def _row_color(s):
+        sev = s.get("Severidade", "")
+        if sev == "🔴":
+            return ["background-color: rgba(244, 67, 54, 0.06)"] * len(s)
+        elif sev == "🟡":
+            return ["background-color: rgba(255, 193, 7, 0.06)"] * len(s)
+        return [""] * len(s)
+
+    styled = df.style.apply(_row_color, axis=1)
+    st.dataframe(styled, width='stretch', hide_index=True)
 
 
 def _show_forces_detail(proc) -> None:
@@ -526,7 +618,7 @@ def _inputs_hash(inputs: dict) -> str:
 
 def main() -> None:
     # Header
-    st.title("🔩 Calculadora de Repuxo Cilíndrico")
+    st.title("Calculadora de Repuxo Cilíndrico")
     st.markdown(
         "Dimensionamento completo do processo de repuxo cilíndrico com aba simples: "
         "blank, sequência de passes, forças e geração de DXF."
@@ -558,9 +650,14 @@ def main() -> None:
             should_compute = st.session_state.get("has_computed", False)
 
     if not should_compute:
-        st.info(
-            "👈  Altere os parâmetros na barra lateral e clique em **Calcular** "
-            "para atualizar o dimensionamento."
+        st.markdown(
+            '<div class="empty-state">'
+            '<h4>Configure os parâmetros e clique em <strong>Calcular</strong></h4>'
+            '<p style="color:rgba(128,128,128,0.7);">'
+            'Altere as dimensões, material e parâmetros na barra lateral '
+            'e pressione o botão <strong>Calcular</strong> para ver os resultados.</p>'
+            '</div>',
+            unsafe_allow_html=True,
         )
         from pathlib import Path
         img_path = Path(__file__).parent / "img" / "Dimensions.JPG"
@@ -659,10 +756,12 @@ def main() -> None:
     st.markdown("---")
     _show_dxf_download(blank_res, seq_res, t=inputs["t"], d_f=inputs["d_f"])
 
-    st.markdown("---")
-    st.caption(
-        "Calculadora de Repuxo Cilíndrico • Fórmulas: Siebel, Kawai, Marciniak et al. "
-        "• Desenvolvido com Python + Streamlit"
+    st.markdown(
+        '<div class="footer">'
+        'Calculadora de Repuxo Cilíndrico <strong>v1.0</strong>  ·  '
+        'Desenvolvido por <a href="https://github.com/Henrique-JMS">Henrique Souza</a>'
+        '</div>',
+        unsafe_allow_html=True,
     )
 
 
