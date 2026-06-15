@@ -163,7 +163,6 @@ pytest tests/test_blank_calculator.py -v
 - [Matplotlib](https://matplotlib.org/) — renderização de perfis
 - [ezdxf](https://ezdxf.mozman.at/) — geração de arquivos DXF
 - [NumPy](https://numpy.org/) — suporte numérico
-- [Pillow](https://python-pillow.org/) — composição de GIF animado
 - [pytest](https://docs.pytest.org/) — testes automatizados
 
 ---
