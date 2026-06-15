@@ -407,14 +407,14 @@ equivalentes em inglês, localização no código e descrição resumida.
 
 ## 14. Referências Bibliográficas
 
-### Kalpakjian & Schmid — Manufacturing Engineering and Technology, 7ª ed.
+### Kalpakjian, S. & Schmid, S.R. — Manufacturing Engineering and Technology, 7th ed.
 - **Onde aparece:** `blank_calculator.py:19`, `constants.py:10`, `materials.py:28`, `pass_sequence.py:21`, `process_data.py:18`, `README.md:79`
 - **Descrição:** Referência principal para fórmulas de blank, forças (Siebel) e coeficientes de repuxo.
 
-### Marciniak, Duncan & Hu — Mechanics of Sheet Metal Forming, 2ª ed.
+### Marciniak, Z., Duncan, J.L., Hu, S.J. — Mechanics of Sheet Metal Forming, 2nd ed.
 - **Onde aparece:** `blank_calculator.py:21`, `constants.py:11`, `pass_sequence.py:23`, `README.md:80`
 - **Descrição:** Referência para mecânica da conformação de chapas, sequência de passes e conservação de área.
 
-### Schuler GmbH — Metal Forming Handbook, Springer, 1998
+### Schuler GmbH — Metal Forming Handbook, Springer, 1998.
 - **Onde aparece:** `blank_calculator.py:22`, `constants.py:12`, `materials.py:29`, `pass_sequence.py:24`, `process_data.py:20`, `README.md:81`
 - **Descrição:** Referência para dados práticos de materiais, folgas, pressões de prensa-chapas e capacidade de prensas.

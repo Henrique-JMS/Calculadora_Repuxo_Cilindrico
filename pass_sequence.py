@@ -18,10 +18,9 @@ Algorithm (per PRD §6.2 – §6.4):
 All dimensions in mm.
 
 References:
-    - Kalpakjian & Schmid — Manufacturing Engineering and Technology, 7th ed.,
-      §16.5, Table 16.3.
-    - Marciniak, Duncan, Hu — Mechanics of Sheet Metal Forming, 2nd ed., §7.3.
-    - Schuler — Metal Forming Handbook, Springer 1998, pp. 222–226.
+    - Kalpakjian, S. & Schmid, S.R. — Manufacturing Engineering and Technology, 7th ed.
+    - Marciniak, Z., Duncan, J.L., Hu, S.J. — Mechanics of Sheet Metal Forming, 2nd ed.
+    - Schuler GmbH — Metal Forming Handbook, Springer, 1998.
 """
 
 from __future__ import annotations

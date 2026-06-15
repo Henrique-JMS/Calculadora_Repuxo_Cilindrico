@@ -170,9 +170,9 @@ pytest tests/test_blank_calculator.py -v
 
 ## Referências
 
-- Kalpakjian, S. & Schmid, S.R. — *Manufacturing Engineering and Technology*, 7ª ed.
-- Marciniak, Z., Duncan, J.L., Hu, S.J. — *Mechanics of Sheet Metal Forming*, 2ª ed.
-- Schuler GmbH — *Metal Forming Handbook*, Springer, 1998.
+- Kalpakjian, S. & Schmid, S.R. — Manufacturing Engineering and Technology, 7th ed.
+- Marciniak, Z., Duncan, J.L., Hu, S.J. — Mechanics of Sheet Metal Forming, 2nd ed.
+- Schuler GmbH — Metal Forming Handbook, Springer, 1998.
 
 ---
 

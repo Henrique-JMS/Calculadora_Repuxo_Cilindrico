@@ -25,8 +25,9 @@ References:
     - EN 10130 / ASTM A1008 (cold-rolled low-carbon steel)
     - EN 10088 (stainless steel)
     - EN 573 / ASTM B209 (aluminium alloys)
-    - Kalpakjian & Schmid — Manufacturing Engineering and Technology, 7th ed., Table 16.4
-    - Schuler — Metal Forming Handbook, Springer, 1998, pp. 216–219
+    - Kalpakjian, S. & Schmid, S.R. — Manufacturing Engineering and Technology, 7th ed.
+    - Marciniak, Z., Duncan, J.L., Hu, S.J. — Mechanics of Sheet Metal Forming, 2nd ed.
+    - Schuler GmbH — Metal Forming Handbook, Springer, 1998.
 """
 
 from __future__ import annotations

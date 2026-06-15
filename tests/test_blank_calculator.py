@@ -4,7 +4,7 @@ tests/test_blank_calculator.py
 Unit tests for blank_calculator.py
 
 Reference cases validated against:
-    - Kalpakjian & Schmid, 7th ed., Example 16.1 (flanged cup)
+    - Kalpakjian, S. & Schmid, S.R. — Manufacturing Engineering and Technology, 7th ed.
     - Manual surface-area calculation performed independently
 """
 

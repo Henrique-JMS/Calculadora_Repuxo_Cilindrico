@@ -31,8 +31,9 @@ Usage:
 
 References:
     - PRD §5.3 — Validações de Input
-    - Marciniak et al. — Mechanics of Sheet Metal Forming, Ch. 7
-    - Schuler — Metal Forming Handbook, pp. 218–221
+    - Kalpakjian, S. & Schmid, S.R. — Manufacturing Engineering and Technology, 7th ed.
+    - Marciniak, Z., Duncan, J.L., Hu, S.J. — Mechanics of Sheet Metal Forming, 2nd ed.
+    - Schuler GmbH — Metal Forming Handbook, Springer, 1998.
 """
 
 from __future__ import annotations

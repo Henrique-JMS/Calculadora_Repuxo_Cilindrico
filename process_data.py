@@ -15,9 +15,9 @@ All pressures in MPa.
 All areas in mm².
 
 References:
-    - Kalpakjian & Schmid — Manufacturing Engineering and Technology, 7th ed.,
-      Eq. 16.4 (punch force), §16.3 (blank holder).
-    - Schuler — Metal Forming Handbook, Springer 1998, pp. 229–234.
+    - Kalpakjian, S. & Schmid, S.R. — Manufacturing Engineering and Technology, 7th ed.
+    - Marciniak, Z., Duncan, J.L., Hu, S.J. — Mechanics of Sheet Metal Forming, 2nd ed.
+    - Schuler GmbH — Metal Forming Handbook, Springer, 1998.
     - PRD §6.5 — Dados Técnicos de Produção.
 """
 
